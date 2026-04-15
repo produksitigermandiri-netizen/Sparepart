@@ -152,6 +152,24 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
   .btn-new { display: inline-block; margin-top: 1.25rem; padding: 9px 20px; background: var(--navy); color: white; border-radius: var(--radius-sm); font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; border: none; }
 
   footer { text-align: center; padding: 1.5rem; font-size: 12px; color: var(--text-light); }
+
+  /* GANTI PIN MODAL */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; align-items:center; justify-content:center; }
+  .modal-overlay.show { display:flex; }
+  .modal-box { background:var(--surface); border-radius:var(--radius); padding:1.75rem; width:100%; max-width:320px; margin:1rem; }
+  .modal-title { font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:700; color:var(--navy); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:1rem; }
+  .pin-field { margin-bottom:10px; }
+  .pin-field label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); display:block; margin-bottom:4px; }
+  .pin-field input { width:100%; padding:9px 12px; font-family:'Barlow',sans-serif; font-size:16px; letter-spacing:0.15em; background:#FAFAF8; border:1px solid var(--border); border-radius:var(--radius-sm); outline:none; }
+  .pin-field input:focus { border-color:var(--navy); }
+  .pin-error { font-size:12px; color:var(--danger); background:var(--danger-bg); border:1px solid #F5CCCC; border-radius:var(--radius-sm); padding:7px 12px; margin-bottom:10px; display:none; }
+  .pin-success { font-size:12px; color:var(--success); background:var(--success-bg); border:1px solid #A8DEC0; border-radius:var(--radius-sm); padding:7px 12px; margin-bottom:10px; display:none; }
+  .modal-btn-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px; }
+  .btn-modal-cancel { padding:9px; font-family:'Barlow',sans-serif; font-size:13px; background:transparent; border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; color:var(--text-muted); }
+  .btn-modal-ok { padding:9px; font-family:'Barlow',sans-serif; font-size:13px; font-weight:600; background:var(--navy); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; }
+  .btn-modal-ok:hover { background:var(--navy-light); }
+  .btn-change-pin { font-family:'Barlow',sans-serif; font-size:12px; color:rgba(255,255,255,0.6); background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:var(--radius-sm); padding:4px 10px; cursor:pointer; transition:all 0.15s; }
+  .btn-change-pin:hover { color:white; border-color:rgba(255,255,255,0.4); }
 </style>
 </head>
 <body>
@@ -166,6 +184,7 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
       <p>PT. Tigermandiri Pratama</p>
     </div>
   </div>
+  <button class="btn-change-pin" onclick="openPinModal()">Ganti PIN</button>
   <div class="user-chip" id="user-chip">
     <div class="user-avatar" id="user-avatar">?</div>
     <span class="user-name" id="user-name-display">Loading...</span>
@@ -235,7 +254,54 @@ const today = new Date().toISOString().split('T')[0]
 document.getElementById('tanggal').value = today
 
 // Load categories and items
-async function loadData() {
+async function 
+// ---- GANTI PIN ----
+function openPinModal() {
+  document.getElementById('pin-lama').value = ''
+  document.getElementById('pin-baru').value = ''
+  document.getElementById('pin-konfirm').value = ''
+  document.getElementById('pin-error').style.display = 'none'
+  document.getElementById('pin-success').style.display = 'none'
+  document.getElementById('pin-modal').classList.add('show')
+  setTimeout(() => document.getElementById('pin-lama').focus(), 100)
+}
+
+function closePinModal() {
+  document.getElementById('pin-modal').classList.remove('show')
+}
+
+async function savePinBaru() {
+  const pinLama = document.getElementById('pin-lama').value
+  const pinBaru = document.getElementById('pin-baru').value
+  const pinKonfirm = document.getElementById('pin-konfirm').value
+  const errEl = document.getElementById('pin-error')
+  const okEl = document.getElementById('pin-success')
+  errEl.style.display = 'none'
+  okEl.style.display = 'none'
+
+  const currentPin = sessionStorage.getItem('emp_pin') || ''
+  if (pinLama !== currentPin) {
+    errEl.textContent = 'PIN lama salah.'; errEl.style.display = 'block'; return
+  }
+  if (!pinBaru) {
+    errEl.textContent = 'PIN baru tidak boleh kosong.'; errEl.style.display = 'block'; return
+  }
+  if (pinBaru !== pinKonfirm) {
+    errEl.textContent = 'Konfirmasi PIN tidak cocok.'; errEl.style.display = 'block'; return
+  }
+  if (pinBaru === pinLama) {
+    errEl.textContent = 'PIN baru harus berbeda dari PIN lama.'; errEl.style.display = 'block'; return
+  }
+
+  const { error } = await supabase.from('employees').update({ pin: pinBaru }).eq('id', empId)
+  if (error) { errEl.textContent = 'Gagal simpan PIN.'; errEl.style.display = 'block'; return }
+
+  sessionStorage.setItem('emp_pin', pinBaru)
+  okEl.style.display = 'block'
+  setTimeout(() => closePinModal(), 1500)
+}
+
+loadData() {
   const [catRes, itemRes] = await Promise.all([
     supabase.from('categories').select('*').order('name'),
     supabase.from('items').select('*, categories(name)').order('name')
@@ -396,6 +462,53 @@ function resetForm() {
   document.getElementById('submit-btn').textContent = 'KIRIM PERMINTAAN'
 }
 
+
+// ---- GANTI PIN ----
+function openPinModal() {
+  document.getElementById('pin-lama').value = ''
+  document.getElementById('pin-baru').value = ''
+  document.getElementById('pin-konfirm').value = ''
+  document.getElementById('pin-error').style.display = 'none'
+  document.getElementById('pin-success').style.display = 'none'
+  document.getElementById('pin-modal').classList.add('show')
+  setTimeout(() => document.getElementById('pin-lama').focus(), 100)
+}
+
+function closePinModal() {
+  document.getElementById('pin-modal').classList.remove('show')
+}
+
+async function savePinBaru() {
+  const pinLama = document.getElementById('pin-lama').value
+  const pinBaru = document.getElementById('pin-baru').value
+  const pinKonfirm = document.getElementById('pin-konfirm').value
+  const errEl = document.getElementById('pin-error')
+  const okEl = document.getElementById('pin-success')
+  errEl.style.display = 'none'
+  okEl.style.display = 'none'
+
+  const currentPin = sessionStorage.getItem('emp_pin') || ''
+  if (pinLama !== currentPin) {
+    errEl.textContent = 'PIN lama salah.'; errEl.style.display = 'block'; return
+  }
+  if (!pinBaru) {
+    errEl.textContent = 'PIN baru tidak boleh kosong.'; errEl.style.display = 'block'; return
+  }
+  if (pinBaru !== pinKonfirm) {
+    errEl.textContent = 'Konfirmasi PIN tidak cocok.'; errEl.style.display = 'block'; return
+  }
+  if (pinBaru === pinLama) {
+    errEl.textContent = 'PIN baru harus berbeda dari PIN lama.'; errEl.style.display = 'block'; return
+  }
+
+  const { error } = await supabase.from('employees').update({ pin: pinBaru }).eq('id', empId)
+  if (error) { errEl.textContent = 'Gagal simpan PIN.'; errEl.style.display = 'block'; return }
+
+  sessionStorage.setItem('emp_pin', pinBaru)
+  okEl.style.display = 'block'
+  setTimeout(() => closePinModal(), 1500)
+}
+
 loadData()
 
 if ('serviceWorker' in navigator) {
@@ -404,5 +517,30 @@ if ('serviceWorker' in navigator) {
   })
 }
 </script>
+
+<div class="modal-overlay" id="pin-modal">
+  <div class="modal-box">
+    <div class="modal-title">Ganti PIN</div>
+    <div class="pin-field">
+      <label>PIN Lama</label>
+      <input type="password" id="pin-lama" placeholder="••••" maxlength="10" />
+    </div>
+    <div class="pin-field">
+      <label>PIN Baru</label>
+      <input type="password" id="pin-baru" placeholder="••••" maxlength="10" />
+    </div>
+    <div class="pin-field">
+      <label>Konfirmasi PIN Baru</label>
+      <input type="password" id="pin-konfirm" placeholder="••••" maxlength="10"
+        onkeydown="if(event.key==='Enter') savePinBaru()" />
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <div class="pin-success" id="pin-success">PIN berhasil diganti!</div>
+    <div class="modal-btn-row">
+      <button class="btn-modal-cancel" onclick="closePinModal()">Batal</button>
+      <button class="btn-modal-ok" onclick="savePinBaru()">Simpan</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
