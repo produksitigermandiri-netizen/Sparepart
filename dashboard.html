@@ -164,6 +164,7 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
   <button class="tab-btn" onclick="switchTab('masuk')">Barang Masuk</button>
   <button class="tab-btn" onclick="switchTab('master')">Master Data</button>
   <button class="tab-btn" onclick="switchTab('laporan')">Laporan</button>
+  <button class="tab-btn" onclick="switchTab('adjustment')">Stock Opname</button>
 </div>
 
 <main>
@@ -317,6 +318,77 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
     </div>
   </div>
 
+
+  <!-- =============================== -->
+  <!-- TAB: STOCK OPNAME / ADJUSTMENT  -->
+  <!-- =============================== -->
+  <div class="tab-panel" id="tab-adjustment">
+
+    <!-- INLINE ADJUSTMENT -->
+    <div class="form-section" style="margin-bottom:1rem;">
+      <div class="form-section-title">Adjustment Cepat (Per Item)</div>
+      <div class="form-inline cols-3" style="margin-bottom:0;">
+        <div class="field">
+          <label>Kategori</label>
+          <select id="adj-cat" onchange="filterAdjItems()">
+            <option value="">Semua Kategori</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Nama Barang</label>
+          <select id="adj-item" onchange="onAdjItemChange()">
+            <option value="">Pilih barang...</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Stok Aktual (Fisik)</label>
+          <input type="number" id="adj-stok" min="0" placeholder="0" />
+        </div>
+        <div class="field">
+          <label>Catatan</label>
+          <input type="text" id="adj-catatan" placeholder="Alasan adjustment..." />
+        </div>
+        <div class="field" style="display:flex;align-items:flex-end;gap:8px;">
+          <div id="adj-stok-info" style="font-size:12px;color:var(--text-muted);padding-bottom:10px;"></div>
+        </div>
+        <div class="field" style="display:flex;align-items:flex-end;">
+          <button class="btn btn-primary" onclick="submitAdjustment()">Simpan Adjustment</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMPORT BULK ADJUSTMENT -->
+    <div class="form-section" style="margin-bottom:1rem;">
+      <div class="form-section-title">Import Bulk (Stock Opname Massal)</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">
+        Format kolom: <code>Nama Barang | Stok Aktual | Catatan (opsional)</code> — file .xlsx atau .csv
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <label class="import-zone" for="adj-import-input">
+          <input type="file" id="adj-import-input" accept=".xlsx,.xls,.csv" onchange="importAdjustment(event)" />
+          <span style="font-size:18px;">📂</span>
+          <p>Upload Excel / CSV adjustment</p>
+        </label>
+        <button class="btn btn-primary" onclick="downloadAdjTemplate()">⬇ Download Template</button>
+      </div>
+      <div id="adj-import-result" style="margin-top:8px;font-size:12px;"></div>
+    </div>
+
+    <!-- HISTORY ADJUSTMENT -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title">Riwayat Adjustment</span>
+        <div class="filter-bar">
+          <input type="date" id="adj-filter-from" />
+          <span style="font-size:12px;color:var(--text-muted);line-height:32px;">s/d</span>
+          <input type="date" id="adj-filter-to" />
+          <button class="btn btn-primary" onclick="loadAdjHistory()">Tampilkan</button>
+        </div>
+      </div>
+      <div id="adj-history-wrap"><div class="empty-state">Pilih filter tanggal lalu klik Tampilkan</div></div>
+    </div>
+  </div>
+
 </main>
 
 <footer>Gudang Sparepart — PT. Tigermandiri Pratama</footer>
@@ -359,6 +431,7 @@ function switchTab(name) {
   if (name === 'stok') loadStok()
   if (name === 'masuk') loadMasuk()
   if (name === 'master') { loadMasterItems(); loadMasterEmployees(); renderCatList() }
+  if (name === 'adjustment') { populateAdjDropdowns(); loadAdjHistory() }
 }
 
 // ---- CATEGORIES ----
@@ -368,7 +441,7 @@ async function loadCategories() {
 }
 
 function populateCategoryDropdowns() {
-  const ids = ['stok-filter-cat','masuk-cat','new-item-cat','lap-cat']
+  const ids = ['stok-filter-cat','masuk-cat','new-item-cat','lap-cat','adj-cat']
   ids.forEach(id => {
     const el = document.getElementById(id)
     if (!el) return
@@ -739,6 +812,186 @@ async function resetPin(id, name) {
   const { error } = await supabase.from('employees').update({ pin: newPin.trim() }).eq('id', id)
   if (error) { alert('Gagal update PIN: ' + error.message); return }
   loadMasterEmployees()
+}
+
+
+// ---- STOCK ADJUSTMENT ----
+function populateAdjDropdowns() {
+  const catSel = document.getElementById('adj-cat')
+  if (!catSel) return
+  const first = catSel.options[0]
+  catSel.innerHTML = ''
+  catSel.appendChild(first)
+  _categories.forEach(c => {
+    const o = document.createElement('option')
+    o.value = c.id; o.textContent = c.name
+    catSel.appendChild(o)
+  })
+  filterAdjItems()
+}
+
+function filterAdjItems() {
+  const catId = document.getElementById('adj-cat').value
+  const sel = document.getElementById('adj-item')
+  const filtered = catId ? _items.filter(i => i.category_id === catId) : _items
+  sel.innerHTML = '<option value="">Pilih barang...</option>' +
+    filtered.map(i => `<option value="${i.id}" data-stock="${i.stock}" data-unit="${escHtml(i.unit)}">${escHtml(i.name)}</option>`).join('')
+  document.getElementById('adj-stok-info').textContent = ''
+  document.getElementById('adj-stok').value = ''
+}
+
+function onAdjItemChange() {
+  const sel = document.getElementById('adj-item')
+  const opt = sel.options[sel.selectedIndex]
+  if (!opt.value) { document.getElementById('adj-stok-info').textContent = ''; return }
+  const stock = opt.dataset.stock
+  const unit = opt.dataset.unit
+  document.getElementById('adj-stok').value = stock
+  document.getElementById('adj-stok-info').textContent = `Stok sistem: ${stock} ${unit}`
+}
+
+async function submitAdjustment() {
+  const itemSel = document.getElementById('adj-item')
+  const opt = itemSel.options[itemSel.selectedIndex]
+  const itemId = opt.value
+  const stokBaru = parseFloat(document.getElementById('adj-stok').value)
+  const catatan = document.getElementById('adj-catatan').value.trim()
+
+  if (!itemId) { alert('Pilih barang dulu.'); return }
+  if (isNaN(stokBaru) || stokBaru < 0) { alert('Stok aktual tidak valid.'); return }
+
+  const stokLama = parseFloat(opt.dataset.stock) || 0
+  if (stokBaru === stokLama) { alert('Stok tidak berubah.'); return }
+
+  const selisih = stokBaru - stokLama
+
+  // Update stok item
+  const { error: itemErr } = await supabase.from('items').update({ stock: stokBaru }).eq('id', itemId)
+  if (itemErr) { alert('Gagal update stok: ' + itemErr.message); return }
+
+  // Insert history
+  await supabase.from('stock_adjustments').insert({
+    item_id: itemId,
+    stok_sebelum: stokLama,
+    stok_sesudah: stokBaru,
+    selisih: selisih,
+    catatan: catatan || null,
+    adjusted_by: _user.id
+  })
+
+  alert(`Stok berhasil diupdate.\nSelisih: ${selisih > 0 ? '+' : ''}${selisih} ${opt.dataset.unit}`)
+  document.getElementById('adj-catatan').value = ''
+  await loadItems()
+  populateAdjDropdowns()
+  loadStok()
+  loadAdjHistory()
+}
+
+async function importAdjustment(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  const resultEl = document.getElementById('adj-import-result')
+  resultEl.innerHTML = '<span style="color:var(--text-muted)">Memproses...</span>'
+
+  let rows = []
+  const ext = file.name.split('.').pop().toLowerCase()
+
+  if (ext === 'xlsx' || ext === 'xls') {
+    const buf = await file.arrayBuffer()
+    const wb = XLSX.read(buf, { type: 'array' })
+    const ws = wb.Sheets[wb.SheetNames[0]]
+    const data = XLSX.utils.sheet_to_json(ws, { defval: '' })
+    rows = data.map(r => ({
+      name: String(r['Nama Barang'] || '').trim(),
+      stokBaru: parseFloat(r['Stok Aktual'] || 0),
+      catatan: String(r['Catatan'] || '').trim()
+    }))
+  } else {
+    const text = await file.text()
+    const lines = text.trim().split('\n').filter(l => l.trim())
+    rows = lines.slice(1).map(line => {
+      const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g,''))
+      return { name: cols[0], stokBaru: parseFloat(cols[1]) || 0, catatan: cols[2] || '' }
+    })
+  }
+
+  let success = 0, skipped = 0, failed = 0
+  for (const row of rows) {
+    if (!row.name) { skipped++; continue }
+    const item = _items.find(i => i.name.toLowerCase() === row.name.toLowerCase())
+    if (!item) { skipped++; continue }
+    if (isNaN(row.stokBaru) || row.stokBaru < 0) { failed++; continue }
+
+    const selisih = row.stokBaru - item.stock
+    if (selisih === 0) { skipped++; continue }
+
+    const { error } = await supabase.from('items').update({ stock: row.stokBaru }).eq('id', item.id)
+    if (error) { failed++; continue }
+
+    await supabase.from('stock_adjustments').insert({
+      item_id: item.id,
+      stok_sebelum: item.stock,
+      stok_sesudah: row.stokBaru,
+      selisih: selisih,
+      catatan: row.catatan || 'Import bulk adjustment',
+      adjusted_by: _user.id
+    })
+    success++
+  }
+
+  resultEl.innerHTML = `<span style="color:var(--success)">✓ ${success} barang diupdate.</span>` +
+    (skipped ? ` <span style="color:var(--text-muted)">${skipped} dilewati.</span>` : '') +
+    (failed ? ` <span style="color:var(--danger)">${failed} gagal.</span>` : '')
+
+  await loadItems()
+  populateAdjDropdowns()
+  loadStok()
+  loadAdjHistory()
+  event.target.value = ''
+}
+
+function downloadAdjTemplate() {
+  const data = [['Nama Barang', 'Stok Aktual', 'Catatan']]
+  _items.slice(0, 5).forEach(i => data.push([i.name, i.stock, '']))
+  const ws = XLSX.utils.aoa_to_sheet(data)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Adjustment')
+  XLSX.writeFile(wb, 'template_adjustment.xlsx')
+}
+
+async function loadAdjHistory() {
+  const from = document.getElementById('adj-filter-from').value
+  const to = document.getElementById('adj-filter-to').value
+  const wrap = document.getElementById('adj-history-wrap')
+  if (!wrap) return
+
+  let q = supabase.from('stock_adjustments')
+    .select('*, items(name, unit, categories(name))')
+    .order('created_at', { ascending: false })
+    .limit(100)
+
+  if (from) q = q.gte('created_at', from)
+  if (to) q = q.lte('created_at', to + 'T23:59:59')
+
+  const { data } = await q
+  if (!data?.length) { wrap.innerHTML = '<div class="empty-state">Belum ada riwayat adjustment</div>'; return }
+
+  wrap.innerHTML = `<div class="table-scroll"><table>
+    <thead><tr><th>Tanggal</th><th>Barang</th><th>Kategori</th><th>Stok Sebelum</th><th>Stok Sesudah</th><th>Selisih</th><th>Catatan</th></tr></thead>
+    <tbody>${data.map(r => {
+      const selisih = r.selisih
+      const selisihColor = selisih > 0 ? 'var(--success)' : selisih < 0 ? 'var(--danger)' : 'var(--text-muted)'
+      const tgl = new Date(r.created_at).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+      return `<tr>
+        <td style="white-space:nowrap;font-size:12px;">${tgl}</td>
+        <td>${escHtml(r.items?.name || '-')}</td>
+        <td>${escHtml(r.items?.categories?.name || '-')}</td>
+        <td>${r.stok_sebelum} ${r.items?.unit || ''}</td>
+        <td>${r.stok_sesudah} ${r.items?.unit || ''}</td>
+        <td style="font-weight:600;color:${selisihColor}">${selisih > 0 ? '+' : ''}${selisih}</td>
+        <td>${escHtml(r.catatan || '-')}</td>
+      </tr>`
+    }).join('')}</tbody></table></div>`
 }
 
 function escHtml(str) {
