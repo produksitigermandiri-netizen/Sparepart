@@ -205,7 +205,7 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
         </div>
         <div class="field">
           <label>Keperluan / Keterangan</label>
-          <input type="text" id="keperluan" placeholder="Contoh: perbaikan mesin line 3" />
+          <input type="text" id="keperluan" placeholder="Contoh: perbaikan mesin line 3" autocomplete="off" />
         </div>
       </div>
     </div>
@@ -239,14 +239,14 @@ let rowCount = 0
 
 // Init
 const empId = sessionStorage.getItem('emp_id')
-const empName = sessionStorage.getItem('emp_name')
-const empJabatan = sessionStorage.getItem('emp_jabatan')
+const empName = sessionStorage.getItem('emp_name') || ''
+const empJabatan = sessionStorage.getItem('emp_jabatan') || ''
 
-if (!empId) window.location.href = 'index.html'
+if (!empId) { window.location.href = 'index.html' }
 
 // Set header
-document.getElementById('user-name-display').textContent = empName
-const initials = empName.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()
+document.getElementById('user-name-display').textContent = empName || 'User'
+const initials = (empName || 'U').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()
 document.getElementById('user-avatar').textContent = initials
 
 // Set today's date
@@ -254,61 +254,20 @@ const today = new Date().toISOString().split('T')[0]
 document.getElementById('tanggal').value = today
 
 // Load categories and items
-async function 
-// ---- GANTI PIN ----
-function openPinModal() {
-  document.getElementById('pin-lama').value = ''
-  document.getElementById('pin-baru').value = ''
-  document.getElementById('pin-konfirm').value = ''
-  document.getElementById('pin-error').style.display = 'none'
-  document.getElementById('pin-success').style.display = 'none'
-  document.getElementById('pin-modal').classList.add('show')
-  setTimeout(() => document.getElementById('pin-lama').focus(), 100)
-}
-
-function closePinModal() {
-  document.getElementById('pin-modal').classList.remove('show')
-}
-
-async function savePinBaru() {
-  const pinLama = document.getElementById('pin-lama').value
-  const pinBaru = document.getElementById('pin-baru').value
-  const pinKonfirm = document.getElementById('pin-konfirm').value
-  const errEl = document.getElementById('pin-error')
-  const okEl = document.getElementById('pin-success')
-  errEl.style.display = 'none'
-  okEl.style.display = 'none'
-
-  const currentPin = sessionStorage.getItem('emp_pin') || ''
-  if (pinLama !== currentPin) {
-    errEl.textContent = 'PIN lama salah.'; errEl.style.display = 'block'; return
+async function loadData() {
+  try {
+    const [catRes, itemRes] = await Promise.all([
+      supabase.from('categories').select('*').order('name'),
+      supabase.from('items').select('*, categories(name)').order('name')
+    ])
+    categories = catRes.data || []
+    allItems = itemRes.data || []
+    document.getElementById('items-container').innerHTML = ''
+    rowCount = 0
+    addItemRow()
+  } catch(err) {
+    console.error('loadData error:', err)
   }
-  if (!pinBaru) {
-    errEl.textContent = 'PIN baru tidak boleh kosong.'; errEl.style.display = 'block'; return
-  }
-  if (pinBaru !== pinKonfirm) {
-    errEl.textContent = 'Konfirmasi PIN tidak cocok.'; errEl.style.display = 'block'; return
-  }
-  if (pinBaru === pinLama) {
-    errEl.textContent = 'PIN baru harus berbeda dari PIN lama.'; errEl.style.display = 'block'; return
-  }
-
-  const { error } = await supabase.from('employees').update({ pin: pinBaru }).eq('id', empId)
-  if (error) { errEl.textContent = 'Gagal simpan PIN.'; errEl.style.display = 'block'; return }
-
-  sessionStorage.setItem('emp_pin', pinBaru)
-  okEl.style.display = 'block'
-  setTimeout(() => closePinModal(), 1500)
-}
-
-loadData() {
-  const [catRes, itemRes] = await Promise.all([
-    supabase.from('categories').select('*').order('name'),
-    supabase.from('items').select('*, categories(name)').order('name')
-  ])
-  categories = catRes.data || []
-  allItems = itemRes.data || []
-  addItemRow()
 }
 
 function addItemRow() {
@@ -486,24 +445,13 @@ async function savePinBaru() {
   const okEl = document.getElementById('pin-success')
   errEl.style.display = 'none'
   okEl.style.display = 'none'
-
   const currentPin = sessionStorage.getItem('emp_pin') || ''
-  if (pinLama !== currentPin) {
-    errEl.textContent = 'PIN lama salah.'; errEl.style.display = 'block'; return
-  }
-  if (!pinBaru) {
-    errEl.textContent = 'PIN baru tidak boleh kosong.'; errEl.style.display = 'block'; return
-  }
-  if (pinBaru !== pinKonfirm) {
-    errEl.textContent = 'Konfirmasi PIN tidak cocok.'; errEl.style.display = 'block'; return
-  }
-  if (pinBaru === pinLama) {
-    errEl.textContent = 'PIN baru harus berbeda dari PIN lama.'; errEl.style.display = 'block'; return
-  }
-
+  if (pinLama !== currentPin) { errEl.textContent = 'PIN lama salah.'; errEl.style.display = 'block'; return }
+  if (!pinBaru) { errEl.textContent = 'PIN baru tidak boleh kosong.'; errEl.style.display = 'block'; return }
+  if (pinBaru !== pinKonfirm) { errEl.textContent = 'Konfirmasi PIN tidak cocok.'; errEl.style.display = 'block'; return }
+  if (pinBaru === pinLama) { errEl.textContent = 'PIN baru harus berbeda dari PIN lama.'; errEl.style.display = 'block'; return }
   const { error } = await supabase.from('employees').update({ pin: pinBaru }).eq('id', empId)
   if (error) { errEl.textContent = 'Gagal simpan PIN.'; errEl.style.display = 'block'; return }
-
   sessionStorage.setItem('emp_pin', pinBaru)
   okEl.style.display = 'block'
   setTimeout(() => closePinModal(), 1500)
