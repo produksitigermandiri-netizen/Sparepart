@@ -2,7 +2,7 @@
   "name": "Gudang Sparepart PT. Tigermandiri Pratama",
   "short_name": "Gudang Sparepart",
   "description": "Sistem keluar masuk barang gudang sparepart",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1A2332",
   "theme_color": "#1A2332",
