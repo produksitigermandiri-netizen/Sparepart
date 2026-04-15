@@ -31,7 +31,7 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
   body { font-family: 'Barlow', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
   /* HEADER */
-  header { background: var(--navy); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  header { background: var(--navy); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
   .header-left { display: flex; align-items: center; gap: 12px; }
   .header-icon { width: 34px; height: 34px; background: var(--amber); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; }
   .header-icon svg { width: 18px; height: 18px; fill: white; }
@@ -43,7 +43,7 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
   .btn-logout:hover { color: white; border-color: rgba(255,255,255,0.3); }
 
   /* TABS */
-  .tabs-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 1.5rem; display: flex; gap: 4px; overflow-x: auto; }
+  .tabs-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 1.5rem; display: flex; gap: 4px; overflow-x: auto; position: sticky; top: 66px; z-index: 99; }
   .tab-btn { font-family: 'Barlow', sans-serif; font-size: 13px; font-weight: 500; padding: 13px 16px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; position: relative; }
   .tab-btn:hover { color: var(--text); }
   .tab-btn.active { color: var(--navy); border-bottom-color: var(--amber); }
