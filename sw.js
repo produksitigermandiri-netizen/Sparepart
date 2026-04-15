@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gudang-sparepart-v1'
+const CACHE_NAME = 'gudang-sparepart-v2'
 
 const STATIC_ASSETS = [
   '/index.html',
