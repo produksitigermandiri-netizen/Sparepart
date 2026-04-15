@@ -280,9 +280,10 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
     <!-- Karyawan -->
     <div class="form-section">
       <div class="form-section-title">Karyawan (User Lapangan)</div>
-      <div class="form-inline cols-3" style="margin-bottom:1rem;max-width:600px;">
+      <div class="form-inline cols-3" style="margin-bottom:1rem;max-width:700px;">
         <div class="field"><label>Nama</label><input type="text" id="new-emp-name" placeholder="Nama karyawan" /></div>
         <div class="field"><label>Jabatan</label><input type="text" id="new-emp-jabatan" placeholder="Teknisi / Operator" /></div>
+        <div class="field"><label>PIN</label><input type="text" id="new-emp-pin" placeholder="Contoh: 1234" maxlength="10" /></div>
         <div class="field" style="display:flex;align-items:flex-end;"><button class="btn btn-primary" onclick="addEmployee()">Tambah</button></div>
       </div>
       <div id="emp-table-wrap"><div class="empty-state">Memuat data...</div></div>
@@ -518,11 +519,14 @@ async function importFile(event) {
 async function addEmployee() {
   const name = document.getElementById('new-emp-name').value.trim()
   const jabatan = document.getElementById('new-emp-jabatan').value.trim()
+  const pin = document.getElementById('new-emp-pin').value.trim()
   if (!name) return
-  const { error } = await supabase.from('employees').insert({ name, jabatan })
+  if (!pin) { alert('PIN wajib diisi.'); return }
+  const { error } = await supabase.from('employees').insert({ name, jabatan, pin })
   if (error) { alert('Gagal: ' + error.message); return }
   document.getElementById('new-emp-name').value = ''
   document.getElementById('new-emp-jabatan').value = ''
+  document.getElementById('new-emp-pin').value = ''
   loadMasterEmployees()
 }
 
@@ -531,11 +535,17 @@ async function loadMasterEmployees() {
   const wrap = document.getElementById('emp-table-wrap')
   if (!data?.length) { wrap.innerHTML = '<div class="empty-state">Belum ada karyawan</div>'; return }
   wrap.innerHTML = `<table>
-    <thead><tr><th>Nama</th><th>Jabatan</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>Nama</th><th>Jabatan</th><th>PIN</th><th>Status</th><th></th></tr></thead>
     <tbody>${data.map(e => `
       <tr>
         <td>${escHtml(e.name)}</td>
         <td>${escHtml(e.jabatan || '-')}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span id="pin-display-${e.id}" style="font-family:monospace;letter-spacing:0.1em;">${e.pin ? '••••' : '<span style=\'color:var(--danger);font-size:11px;\'>Belum diset</span>'}</span>
+            <button class="btn" style="padding:3px 8px;font-size:11px;" onclick="resetPin('${e.id}', '${escHtml(e.name)}')">Ganti</button>
+          </div>
+        </td>
         <td><span class="badge ${e.active ? 'badge-approved' : 'badge-rejected'}">${e.active ? 'Aktif' : 'Nonaktif'}</span></td>
         <td>
           <button class="btn ${e.active ? 'btn-reject' : 'btn-approve'}" onclick="toggleEmployee('${e.id}', ${e.active})">
@@ -715,6 +725,15 @@ async function loadLaporan() {
       <tbody>${rows.map(r => `
         <tr><td>${r.tanggal}</td><td>${escHtml(r.emp || '-')}</td><td>${escHtml(r.item || '-')}</td><td>${escHtml(r.cat || '-')}</td><td>${r.qty} ${r.unit || ''}</td><td>${escHtml(r.keperluan || '-')}</td></tr>`).join('')}</tbody></table>`
   }
+}
+
+async function resetPin(id, name) {
+  const newPin = prompt(`Masukkan PIN baru untuk ${name}:`)
+  if (newPin === null) return
+  if (!newPin.trim()) { alert('PIN tidak boleh kosong.'); return }
+  const { error } = await supabase.from('employees').update({ pin: newPin.trim() }).eq('id', id)
+  if (error) { alert('Gagal update PIN: ' + error.message); return }
+  loadMasterEmployees()
 }
 
 function escHtml(str) {
