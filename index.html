@@ -221,6 +221,62 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
     font-size: 12px;
     color: var(--text-light);
   }
+
+  /* PIN MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 2rem; width: 100%; max-width: 340px;
+    margin: 1rem;
+  }
+  .modal-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--navy); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; margin: 0 auto 12px;
+  }
+  .modal-name {
+    text-align: center; font-size: 16px; font-weight: 600;
+    color: var(--navy); margin-bottom: 4px;
+  }
+  .modal-sub {
+    text-align: center; font-size: 12px; color: var(--text-muted);
+    margin-bottom: 1.5rem;
+  }
+  .pin-input {
+    width: 100%; padding: 12px; text-align: center;
+    font-size: 22px; letter-spacing: 0.3em;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
+    background: #FAFAF8; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); outline: none;
+    margin-bottom: 10px;
+  }
+  .pin-input:focus { border-color: var(--navy); }
+  .pin-error {
+    font-size: 12px; color: var(--danger);
+    background: var(--danger-bg); border: 1px solid #F5CCCC;
+    border-radius: var(--radius-sm); padding: 7px 12px;
+    margin-bottom: 10px; display: none; text-align: center;
+  }
+  .pin-btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn-cancel {
+    padding: 9px; font-family: 'Barlow', sans-serif;
+    font-size: 13px; font-weight: 500;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); cursor: pointer; color: var(--text-muted);
+  }
+  .btn-confirm {
+    padding: 9px; font-family: 'Barlow', sans-serif;
+    font-size: 13px; font-weight: 600;
+    background: var(--navy); color: white; border: none;
+    border-radius: var(--radius-sm); cursor: pointer;
+  }
+  .btn-confirm:hover { background: var(--navy-light); }
 </style>
 </head>
 <body>
@@ -309,7 +365,7 @@ async function loadEmployees() {
   grid.innerHTML = data.map(emp => {
     const initials = emp.name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()
     return `
-      <button class="emp-btn" onclick="selectEmployee('${emp.id}', '${escHtml(emp.name)}', '${escHtml(emp.jabatan || '')}')">
+      <button class="emp-btn" onclick="selectEmployee('${emp.id}', '${escHtml(emp.name)}', '${escHtml(emp.jabatan || '')}', '${escHtml(emp.pin || '')}')">
         <div class="emp-avatar">${initials}</div>
         <div class="emp-info">
           <div class="emp-name">${escHtml(emp.name)}</div>
@@ -323,10 +379,42 @@ function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
 }
 
-function selectEmployee(id, name, jabatan) {
-  sessionStorage.setItem('emp_id', id)
-  sessionStorage.setItem('emp_name', name)
-  sessionStorage.setItem('emp_jabatan', jabatan)
+let _selectedEmp = null
+
+function selectEmployee(id, name, jabatan, pin) {
+  _selectedEmp = { id, name, jabatan, pin }
+  const initials = name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()
+  document.getElementById('modal-avatar').textContent = initials
+  document.getElementById('modal-name').textContent = name
+  document.getElementById('pin-input').value = ''
+  document.getElementById('pin-error').style.display = 'none'
+  document.getElementById('pin-modal').classList.add('show')
+  setTimeout(() => document.getElementById('pin-input').focus(), 100)
+}
+
+function closeModal() {
+  document.getElementById('pin-modal').classList.remove('show')
+  _selectedEmp = null
+}
+
+function confirmPin() {
+  const entered = document.getElementById('pin-input').value
+  const errEl = document.getElementById('pin-error')
+  if (!_selectedEmp.pin) {
+    errEl.textContent = 'PIN belum diset. Hubungi PJ Gudang.'
+    errEl.style.display = 'block'
+    return
+  }
+  if (entered !== _selectedEmp.pin) {
+    errEl.textContent = 'PIN salah. Coba lagi.'
+    errEl.style.display = 'block'
+    document.getElementById('pin-input').value = ''
+    document.getElementById('pin-input').focus()
+    return
+  }
+  sessionStorage.setItem('emp_id', _selectedEmp.id)
+  sessionStorage.setItem('emp_name', _selectedEmp.name)
+  sessionStorage.setItem('emp_jabatan', _selectedEmp.jabatan)
   window.location.href = 'pengambilan.html'
 }
 
@@ -382,5 +470,21 @@ if ('serviceWorker' in navigator) {
   })
 }
 </script>
+
+<div class="modal-overlay" id="pin-modal">
+  <div class="modal-box">
+    <div class="modal-avatar" id="modal-avatar"></div>
+    <div class="modal-name" id="modal-name"></div>
+    <div class="modal-sub">Masukkan PIN untuk melanjutkan</div>
+    <input class="pin-input" type="password" id="pin-input"
+      placeholder="••••" maxlength="10"
+      onkeydown="if(event.key==='Enter') confirmPin()" />
+    <div class="pin-error" id="pin-error">PIN salah. Coba lagi.</div>
+    <div class="pin-btn-row">
+      <button class="btn-cancel" onclick="closeModal()">Batal</button>
+      <button class="btn-confirm" onclick="confirmPin()">Masuk</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
