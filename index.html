@@ -278,6 +278,92 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
     border-radius: var(--radius-sm); cursor: pointer;
   }
   .btn-confirm:hover { background: var(--navy-light); }
+
+  /* INSTALL BANNER */
+  .install-banner {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--navy);
+    padding: 14px 16px;
+    z-index: 300;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+    animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .install-banner.show { display: block; }
+  .install-banner-inner {
+    display: flex; align-items: center; gap: 12px;
+    max-width: 600px; margin: 0 auto;
+  }
+  .install-banner-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    background: var(--amber); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .install-banner-icon svg { width: 22px; height: 22px; fill: white; }
+  .install-banner-text { flex: 1; }
+  .install-banner-text strong {
+    display: block; font-size: 14px; font-weight: 600;
+    color: white;
+  }
+  .install-banner-text span {
+    font-size: 12px; color: #8899AA;
+  }
+  .install-banner-btns { display: flex; gap: 8px; flex-shrink: 0; }
+  .btn-install {
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px; font-weight: 600;
+    background: var(--amber); color: white;
+    border: none; border-radius: var(--radius-sm);
+    padding: 8px 16px; cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-install-close {
+    font-family: 'Barlow', sans-serif;
+    font-size: 13px; color: #8899AA;
+    background: transparent; border: 1px solid rgba(255,255,255,0.15);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px; cursor: pointer;
+  }
+
+  /* iOS banner khusus */
+  .ios-banner {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--navy);
+    padding: 14px 16px 20px;
+    z-index: 300;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+    animation: slideUp 0.3s ease;
+  }
+  .ios-banner.show { display: block; }
+  .ios-banner-inner { max-width: 600px; margin: 0 auto; }
+  .ios-banner-top {
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 10px;
+  }
+  .ios-banner-title { font-size: 14px; font-weight: 600; color: white; }
+  .ios-banner-close {
+    background: none; border: none; color: #8899AA;
+    font-size: 20px; cursor: pointer; line-height: 1; padding: 0;
+  }
+  .ios-steps {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.07);
+    border-radius: var(--radius-sm); padding: 10px 12px;
+  }
+  .ios-steps span { font-size: 12px; color: #AAB8C8; line-height: 1.5; }
+  .ios-arrow {
+    position: absolute; bottom: -8px; left: 50%;
+    transform: translateX(-50%);
+    width: 16px; height: 8px;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid var(--navy);
+  }
 </style>
 </head>
 <body>
@@ -465,6 +551,56 @@ async function checkSession() {
 checkSession()
 loadEmployees()
 
+
+// ---- PWA INSTALL PROMPT ----
+let deferredPrompt = null
+
+function isIos() {
+  return /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase())
+}
+function isInStandaloneMode() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+}
+
+// Android: catch install prompt
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault()
+  deferredPrompt = e
+  // Show only if not dismissed before
+  if (!sessionStorage.getItem('install_dismissed')) {
+    setTimeout(function() {
+      document.getElementById('install-banner').classList.add('show')
+    }, 1500)
+  }
+})
+
+async function installApp() {
+  if (!deferredPrompt) return
+  deferredPrompt.prompt()
+  const result = await deferredPrompt.userChoice
+  deferredPrompt = null
+  document.getElementById('install-banner').classList.remove('show')
+}
+
+function dismissBanner() {
+  document.getElementById('install-banner').classList.remove('show')
+  sessionStorage.setItem('install_dismissed', '1')
+}
+
+// iOS: show manual instruction
+if (isIos() && !isInStandaloneMode()) {
+  if (!sessionStorage.getItem('ios_dismissed')) {
+    setTimeout(function() {
+      document.getElementById('ios-banner').classList.add('show')
+    }, 1500)
+  }
+}
+
+function dismissIosBanner() {
+  document.getElementById('ios-banner').classList.remove('show')
+  sessionStorage.setItem('ios_dismissed', '1')
+}
+
 // Register Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
@@ -485,6 +621,36 @@ if ('serviceWorker' in navigator) {
     <div class="pin-btn-row">
       <button class="btn-cancel" onclick="closeModal()">Batal</button>
       <button class="btn-confirm" onclick="confirmPin()">Masuk</button>
+    </div>
+  </div>
+</div>
+
+<!-- Android/Chrome Install Banner -->
+<div class="install-banner" id="install-banner">
+  <div class="install-banner-inner">
+    <div class="install-banner-icon">
+      <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zm-9 9H5v-2h6v2zm8-4H5v-2h14v2zM15 5H9V3h6v2z"/></svg>
+    </div>
+    <div class="install-banner-text">
+      <strong>Install Gudang Sparepart</strong>
+      <span>Pasang di HP untuk akses lebih cepat</span>
+    </div>
+    <div class="install-banner-btns">
+      <button class="btn-install-close" onclick="dismissBanner()">Nanti</button>
+      <button class="btn-install" onclick="installApp()">Install</button>
+    </div>
+  </div>
+</div>
+
+<!-- iOS Safari Install Banner -->
+<div class="ios-banner" id="ios-banner">
+  <div class="ios-banner-inner">
+    <div class="ios-banner-top">
+      <span class="ios-banner-title">Install Gudang Sparepart di iPhone/iPad</span>
+      <button class="ios-banner-close" onclick="dismissIosBanner()">×</button>
+    </div>
+    <div class="ios-steps">
+      <span>Ketuk tombol <strong style="color:white;">Bagikan</strong> (&#x2B06;) di browser Safari, lalu pilih <strong style="color:white;">"Tambahkan ke Layar Utama"</strong></span>
     </div>
   </div>
 </div>
