@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="icons/icon-152x152.png" />
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzbXd4dGl6YWx2dWJ3bWJ2eHhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyMjYwMDUsImV4cCI6MjA5MTgwMjAwNX0.CZiN998WoV5ghRH2VXXDSAGs0o_sMj4zlWm8q9ID_TI')
 </script>
@@ -261,14 +262,14 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
         <div class="field" style="display:flex;align-items:flex-end;"><button class="btn btn-primary" onclick="addItem()">Tambah Barang</button></div>
       </div>
 
-      <!-- Import CSV -->
+      <!-- Import XLSX/CSV -->
       <div style="margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Import CSV</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Format kolom: <code>nama_barang, kategori, satuan, stok</code></div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Import Data Barang</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Format kolom: <code>Nama Barang | Kategori | Satuan | Stok Awal</code> — support file <strong>.xlsx</strong> dan .csv</div>
         <label class="import-zone" for="csv-input">
-          <input type="file" id="csv-input" accept=".csv" onchange="importCSV(event)" />
+          <input type="file" id="csv-input" accept=".xlsx,.xls,.csv" onchange="importFile(event)" />
           <div style="font-size:24px;">📂</div>
-          <p>Klik untuk upload file CSV</p>
+          <p>Klik untuk upload file Excel (.xlsx) atau CSV</p>
         </label>
         <div id="import-result" style="margin-top:8px;font-size:12px;"></div>
       </div>
@@ -457,37 +458,54 @@ function loadMasterItems() {
       </tr>`).join('')}</tbody></table>`
 }
 
-// ---- CSV IMPORT ----
-async function importCSV(event) {
+// ---- IMPORT XLSX / CSV ----
+async function importFile(event) {
   const file = event.target.files[0]
   if (!file) return
-  const text = await file.text()
-  const lines = text.trim().split('\n').filter(l => l.trim())
   const resultEl = document.getElementById('import-result')
+  resultEl.innerHTML = '<span style="color:var(--text-muted)">Memproses file...</span>'
+
+  let rows = []
+  const ext = file.name.split('.').pop().toLowerCase()
+
+  if (ext === 'xlsx' || ext === 'xls') {
+    const buf = await file.arrayBuffer()
+    const wb = XLSX.read(buf, { type: 'array' })
+    const ws = wb.Sheets[wb.SheetNames[0]]
+    const data = XLSX.utils.sheet_to_json(ws, { defval: '' })
+    rows = data.map(r => ({
+      name: String(r['Nama Barang'] || r['nama_barang'] || '').trim(),
+      catName: String(r['Kategori'] || r['kategori'] || '').trim(),
+      unit: String(r['Satuan'] || r['satuan'] || '').trim(),
+      stock: parseFloat(r['Stok Awal'] || r['stok'] || 0) || 0
+    }))
+  } else {
+    const text = await file.text()
+    const lines = text.trim().split('\n').filter(l => l.trim())
+    rows = lines.slice(1).map(line => {
+      const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''))
+      return { name: cols[0], catName: cols[1], unit: cols[2], stock: parseFloat(cols[3]) || 0 }
+    })
+  }
+
   let success = 0, failed = 0
-
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''))
-    const [name, catName, unit, stockStr] = cols
-    if (!name || !unit) { failed++; continue }
-
+  for (const row of rows) {
+    if (!row.name || !row.unit) { failed++; continue }
     let catId = null
-    if (catName) {
-      let cat = _categories.find(c => c.name.toLowerCase() === catName.toLowerCase())
+    if (row.catName) {
+      let cat = _categories.find(c => c.name.toLowerCase() === row.catName.toLowerCase())
       if (!cat) {
-        const { data } = await supabase.from('categories').insert({ name: catName }).select().single()
+        const { data } = await supabase.from('categories').insert({ name: row.catName }).select().single()
         if (data) { _categories.push(data); cat = data }
       }
-      catId = cat?.id || null
+      catId = cat ? cat.id : null
     }
-
-    const stock = parseFloat(stockStr) || 0
-    const { error } = await supabase.from('items').insert({ name, category_id: catId, unit, stock })
+    const { error } = await supabase.from('items').insert({ name: row.name, category_id: catId, unit: row.unit, stock: row.stock })
     if (error) failed++; else success++
   }
 
-  resultEl.innerHTML = `<span style="color:var(--success)">Berhasil import ${success} barang.</span>` +
-    (failed ? ` <span style="color:var(--danger)">${failed} baris gagal.</span>` : '')
+  resultEl.innerHTML = '<span style="color:var(--success)">Berhasil import ' + success + ' barang.</span>' +
+    (failed ? ' <span style="color:var(--danger)">' + failed + ' baris gagal.</span>' : '')
   await loadCategories()
   await loadItems()
   populateCategoryDropdowns()
