@@ -39,23 +39,25 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
   .header-text p { font-size: 11px; color: #8899AA; }
   .header-right { display: flex; align-items: center; gap: 10px; }
   .pj-name { font-size: 13px; color: #AAB8C8; }
+  @media (max-width: 480px) { .pj-name { display: none; } }
   .btn-logout { font-family: 'Barlow', sans-serif; font-size: 12px; color: #8899AA; background: transparent; border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius-sm); padding: 5px 12px; cursor: pointer; }
   .btn-logout:hover { color: white; border-color: rgba(255,255,255,0.3); }
 
   /* TABS */
   .tabs-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 1.5rem; display: flex; gap: 4px; overflow-x: auto; position: sticky; top: 66px; z-index: 99; }
-  .tab-btn { font-family: 'Barlow', sans-serif; font-size: 13px; font-weight: 500; padding: 13px 16px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; position: relative; }
+  .tab-btn { font-family: 'Barlow', sans-serif; font-size: 13px; font-weight: 500; padding: 12px 14px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; position: relative; -webkit-tap-highlight-color: transparent; }
+  @media (max-width: 480px) { .tab-btn { font-size: 12px; padding: 10px 10px; } }
   .tab-btn:hover { color: var(--text); }
   .tab-btn.active { color: var(--navy); border-bottom-color: var(--amber); }
   .tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; background: var(--danger); color: white; border-radius: 999px; font-size: 10px; font-weight: 700; padding: 0 4px; margin-left: 6px; }
 
-  main { flex: 1; padding: 1.5rem; max-width: 1100px; margin: 0 auto; width: 100%; }
+  main { flex: 1; padding: 1rem; max-width: 1100px; margin: 0 auto; width: 100%; }
 
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
   /* STAT CARDS */
-  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 1rem; }
   .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; }
   .stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
   .stat-val { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 700; color: var(--navy); margin-top: 4px; }
@@ -63,7 +65,8 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
 
   /* TABLE */
   .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .table-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
   .table-title { font-size: 14px; font-weight: 600; color: var(--navy); }
   table { width: 100%; border-collapse: collapse; }
   th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); background: #FAFAF8; }
@@ -90,6 +93,7 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
 
   /* FILTER BAR */
   .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+  @media (max-width: 560px) { .filter-bar select, .filter-bar input { font-size: 12px; padding: 5px 8px; } }
   .filter-bar select, .filter-bar input {
     font-family: 'Barlow', sans-serif; font-size: 13px;
     padding: 6px 10px; background: var(--bg); border: 1px solid var(--border);
@@ -115,7 +119,8 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
   .field input:focus, .field select:focus { border-color: var(--navy); }
   .cols-3 { grid-template-columns: 1fr 1fr 1fr auto; align-items: end; }
   .cols-2 { grid-template-columns: 1fr auto; align-items: end; }
-  @media (max-width: 600px) { .cols-3, .cols-2 { grid-template-columns: 1fr; } }
+  @media (max-width: 700px) { .cols-3 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .cols-3, .cols-2 { grid-template-columns: 1fr; } }
 
   /* DETAIL EXPAND */
   .detail-row { background: #FAFAF8; }
@@ -447,7 +452,7 @@ async function deleteItem(id) {
 function loadMasterItems() {
   const wrap = document.getElementById('items-table-wrap')
   if (!_items.length) { wrap.innerHTML = '<div class="empty-state">Belum ada barang</div>'; return }
-  wrap.innerHTML = `<table>
+  wrap.innerHTML = `<div class='table-scroll'><table>
     <thead><tr><th>Nama Barang</th><th>Kategori</th><th>Satuan</th><th>Stok</th><th></th></tr></thead>
     <tbody>${_items.map(i => `
       <tr>
@@ -456,7 +461,7 @@ function loadMasterItems() {
         <td>${escHtml(i.unit)}</td>
         <td class="${i.stock <= 5 ? 'stok-low' : ''}">${i.stock}</td>
         <td><button class="btn btn-danger" onclick="deleteItem('${i.id}')">Hapus</button></td>
-      </tr>`).join('')}</tbody></table>`
+      </tr>`).join('')}</tbody></table></div>`
 }
 
 // ---- IMPORT XLSX / CSV ----
@@ -534,7 +539,7 @@ async function loadMasterEmployees() {
   const { data } = await supabase.from('employees').select('*').order('name')
   const wrap = document.getElementById('emp-table-wrap')
   if (!data?.length) { wrap.innerHTML = '<div class="empty-state">Belum ada karyawan</div>'; return }
-  wrap.innerHTML = `<table>
+  wrap.innerHTML = `<div class='table-scroll'><table>
     <thead><tr><th>Nama</th><th>Jabatan</th><th>PIN</th><th>Status</th><th></th></tr></thead>
     <tbody>${data.map(e => `
       <tr>
@@ -552,7 +557,7 @@ async function loadMasterEmployees() {
             ${e.active ? 'Nonaktifkan' : 'Aktifkan'}
           </button>
         </td>
-      </tr>`).join('')}</tbody></table>`
+      </tr>`).join('')}</tbody></table></div>`
 }
 
 async function toggleEmployee(id, current) {
@@ -583,7 +588,7 @@ async function loadRequests() {
 
   if (!data?.length) { wrap.innerHTML = '<div class="empty-state">Tidak ada data</div>'; return }
 
-  wrap.innerHTML = `<table>
+  wrap.innerHTML = `<div class='table-scroll'><table>
     <thead><tr><th>Tanggal</th><th>Nama</th><th>Keperluan</th><th>Barang</th><th>Status</th><th>Aksi</th></tr></thead>
     <tbody>${data.map(r => {
       const itemTags = r.stock_out_items?.map(si =>
@@ -601,7 +606,7 @@ async function loadRequests() {
             <button class="btn btn-reject" onclick="rejectRequest('${r.id}')">Tolak</button>
           </div>` : '<span style="font-size:12px;color:var(--text-muted)">—</span>'}</td>
       </tr>`
-    }).join('')}</tbody></table>`
+    }).join('')}</tbody></table></div>`
 }
 
 async function approveRequest(id) {
@@ -630,7 +635,7 @@ async function loadStok() {
   const wrap = document.getElementById('stok-table-wrap')
   if (!filtered.length) { wrap.innerHTML = '<div class="empty-state">Tidak ada barang</div>'; return }
 
-  wrap.innerHTML = `<table>
+  wrap.innerHTML = `<div class='table-scroll'><table>
     <thead><tr><th>Nama Barang</th><th>Kategori</th><th>Satuan</th><th>Stok</th></tr></thead>
     <tbody>${filtered.map(i => `
       <tr>
@@ -638,7 +643,7 @@ async function loadStok() {
         <td>${escHtml(i.categories?.name || '-')}</td>
         <td>${escHtml(i.unit)}</td>
         <td class="${i.stock <= 5 ? 'stok-low' : 'stok-ok'}">${i.stock} ${i.stock <= 5 ? '⚠' : ''}</td>
-      </tr>`).join('')}</tbody></table>`
+      </tr>`).join('')}</tbody></table></div>`
 }
 
 // ---- BARANG MASUK ----
@@ -670,7 +675,7 @@ async function loadMasuk() {
   const wrap = document.getElementById('masuk-table-wrap')
   if (!data?.length) { wrap.innerHTML = '<div class="empty-state">Belum ada data barang masuk</div>'; return }
 
-  wrap.innerHTML = `<table>
+  wrap.innerHTML = `<div class='table-scroll'><table>
     <thead><tr><th>Tanggal</th><th>Barang</th><th>Kategori</th><th>Qty</th><th>Keterangan</th></tr></thead>
     <tbody>${data.map(r => `
       <tr>
@@ -679,7 +684,7 @@ async function loadMasuk() {
         <td>${escHtml(r.items?.categories?.name || '-')}</td>
         <td>+${r.qty} ${r.items?.unit || ''}</td>
         <td>${escHtml(r.notes || '-')}</td>
-      </tr>`).join('')}</tbody></table>`
+      </tr>`).join('')}</tbody></table></div>`
 }
 
 // ---- LAPORAN ----
@@ -698,10 +703,10 @@ async function loadLaporan() {
     let filtered = data || []
     if (catId) filtered = filtered.filter(r => r.items?.category_id === catId)
     if (!filtered.length) { wrap.innerHTML = '<div class="empty-state">Tidak ada data</div>'; return }
-    wrap.innerHTML = `<table>
+    wrap.innerHTML = `<div class='table-scroll'><table>
       <thead><tr><th>Tanggal</th><th>Barang</th><th>Kategori</th><th>Qty Masuk</th><th>Keterangan</th></tr></thead>
       <tbody>${filtered.map(r => `
-        <tr><td>${r.tanggal}</td><td>${escHtml(r.items?.name || '-')}</td><td>${escHtml(r.items?.categories?.name || '-')}</td><td>+${r.qty} ${r.items?.unit || ''}</td><td>${escHtml(r.notes || '-')}</td></tr>`).join('')}</tbody></table>`
+        <tr><td>${r.tanggal}</td><td>${escHtml(r.items?.name || '-')}</td><td>${escHtml(r.items?.categories?.name || '-')}</td><td>+${r.qty} ${r.items?.unit || ''}</td><td>${escHtml(r.notes || '-')}</td></tr>`).join('')}</tbody></table></div>`
   } else {
     let q = supabase.from('stock_out_requests')
       .select('*, employees(name), stock_out_items(qty, items(name, unit, category_id, categories(name)))')
@@ -720,10 +725,10 @@ async function loadLaporan() {
     })
 
     if (!rows.length) { wrap.innerHTML = '<div class="empty-state">Tidak ada data</div>'; return }
-    wrap.innerHTML = `<table>
+    wrap.innerHTML = `<div class='table-scroll'><table>
       <thead><tr><th>Tanggal</th><th>Diambil Oleh</th><th>Barang</th><th>Kategori</th><th>Qty Keluar</th><th>Keperluan</th></tr></thead>
       <tbody>${rows.map(r => `
-        <tr><td>${r.tanggal}</td><td>${escHtml(r.emp || '-')}</td><td>${escHtml(r.item || '-')}</td><td>${escHtml(r.cat || '-')}</td><td>${r.qty} ${r.unit || ''}</td><td>${escHtml(r.keperluan || '-')}</td></tr>`).join('')}</tbody></table>`
+        <tr><td>${r.tanggal}</td><td>${escHtml(r.emp || '-')}</td><td>${escHtml(r.item || '-')}</td><td>${escHtml(r.cat || '-')}</td><td>${r.qty} ${r.unit || ''}</td><td>${escHtml(r.keperluan || '-')}</td></tr>`).join('')}</tbody></table></div>`
   }
 }
 
