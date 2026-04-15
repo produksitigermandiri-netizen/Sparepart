@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard PJ Gudang — Gudang Sparepart</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F4F2EE; --surface: #FFFFFF; --navy: #1A2332; --navy-light: #2C3E55;
+    --amber: #D4860A; --amber-bg: #FFF8EC;
+    --border: #D8D4CC; --border-strong: #B8B4AC;
+    --text: #1A2332; --text-muted: #6B6760; --text-light: #9B9890;
+    --success-bg: #EAF5F0; --success: #1A7A4A; --success-border: #A8DEC0;
+    --danger-bg: #FEF0F0; --danger: #B83232; --danger-border: #F5CCCC;
+    --warning-bg: #FFF8EC; --warning: #D4860A; --warning-border: #F5D9A0;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  body { font-family: 'Barlow', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* HEADER */
+  header { background: var(--navy); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .header-icon { width: 34px; height: 34px; background: var(--amber); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; }
+  .header-icon svg { width: 18px; height: 18px; fill: white; }
+  .header-text h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700; color: white; letter-spacing: 0.02em; }
+  .header-text p { font-size: 11px; color: #8899AA; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .pj-name { font-size: 13px; color: #AAB8C8; }
+  .btn-logout { font-family: 'Barlow', sans-serif; font-size: 12px; color: #8899AA; background: transparent; border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius-sm); padding: 5px 12px; cursor: pointer; }
+  .btn-logout:hover { color: white; border-color: rgba(255,255,255,0.3); }
+
+  /* TABS */
+  .tabs-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 1.5rem; display: flex; gap: 4px; overflow-x: auto; }
+  .tab-btn { font-family: 'Barlow', sans-serif; font-size: 13px; font-weight: 500; padding: 13px 16px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; position: relative; }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--navy); border-bottom-color: var(--amber); }
+  .tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; background: var(--danger); color: white; border-radius: 999px; font-size: 10px; font-weight: 700; padding: 0 4px; margin-left: 6px; }
+
+  main { flex: 1; padding: 1.5rem; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* STAT CARDS */
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; }
+  .stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .stat-val { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 700; color: var(--navy); margin-top: 4px; }
+  .stat-sub { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+
+  /* TABLE */
+  .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .table-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .table-title { font-size: 14px; font-weight: 600; color: var(--navy); }
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); background: #FAFAF8; }
+  td { font-size: 13px; padding: 11px 16px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #FAFAF8; }
+
+  /* BADGES */
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+  .badge-pending { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+  .badge-approved { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+  .badge-rejected { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+
+  /* BUTTONS */
+  .btn { font-family: 'Barlow', sans-serif; font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid; transition: all 0.15s; }
+  .btn-approve { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
+  .btn-approve:hover { background: #C5EDD8; }
+  .btn-reject { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
+  .btn-reject:hover { background: #FDDDDD; }
+  .btn-primary { background: var(--navy); color: white; border-color: var(--navy); font-size: 13px; padding: 7px 14px; }
+  .btn-primary:hover { background: var(--navy-light); }
+  .btn-danger { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); font-size: 12px; padding: 5px 10px; }
+  .btn-danger:hover { background: #FDDDDD; }
+
+  /* FILTER BAR */
+  .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+  .filter-bar select, .filter-bar input {
+    font-family: 'Barlow', sans-serif; font-size: 13px;
+    padding: 6px 10px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text); outline: none;
+  }
+  .filter-bar select:focus, .filter-bar input:focus { border-color: var(--navy); }
+
+  /* STOK LOW */
+  .stok-low { color: var(--danger); font-weight: 600; }
+  .stok-ok { color: var(--text); }
+
+  /* FORM INLINE */
+  .form-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+  .form-section-title { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.05em; color: var(--navy); text-transform: uppercase; margin-bottom: 12px; }
+  .form-inline { display: grid; gap: 10px; }
+  .form-inline .field { margin-bottom: 0; }
+  .field label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 4px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 8px 10px; font-family: 'Barlow', sans-serif; font-size: 13px;
+    background: #FAFAF8; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); outline: none;
+  }
+  .field input:focus, .field select:focus { border-color: var(--navy); }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr auto; align-items: end; }
+  .cols-2 { grid-template-columns: 1fr auto; align-items: end; }
+  @media (max-width: 600px) { .cols-3, .cols-2 { grid-template-columns: 1fr; } }
+
+  /* DETAIL EXPAND */
+  .detail-row { background: #FAFAF8; }
+  .detail-row td { padding: 8px 16px 14px; }
+  .detail-items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .detail-item-tag { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 10px; font-size: 12px; }
+
+  .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); font-size: 14px; }
+
+  /* IMPORT */
+  .import-zone { border: 2px dashed var(--border-strong); border-radius: var(--radius); padding: 2rem; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .import-zone:hover { border-color: var(--amber); background: var(--amber-bg); }
+  .import-zone input { display: none; }
+  .import-zone p { font-size: 14px; color: var(--text-muted); margin-top: 8px; }
+
+  footer { text-align: center; padding: 1.5rem; font-size: 12px; color: var(--text-light); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="header-icon">
+      <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zm-9 9H5v-2h6v2zm8-4H5v-2h14v2zM15 5H9V3h6v2z"/></svg>
+    </div>
+    <div class="header-text">
+      <h1>GUDANG SPAREPART</h1>
+      <p>PT. Tigermandiri Pratama — Dashboard PJ</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="pj-name" id="pj-name"></span>
+    <button class="btn-logout" onclick="doLogout()">Keluar</button>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs-bar">
+  <button class="tab-btn active" onclick="switchTab('pending')">Permintaan <span class="tab-badge" id="pending-count" style="display:none">0</span></button>
+  <button class="tab-btn" onclick="switchTab('stok')">Stok Barang</button>
+  <button class="tab-btn" onclick="switchTab('masuk')">Barang Masuk</button>
+  <button class="tab-btn" onclick="switchTab('master')">Master Data</button>
+  <button class="tab-btn" onclick="switchTab('laporan')">Laporan</button>
+</div>
+
+<main>
+
+  <!-- =============================== -->
+  <!-- TAB: PERMINTAAN PENDING         -->
+  <!-- =============================== -->
+  <div class="tab-panel active" id="tab-pending">
+    <div class="stat-row" id="stat-row-pending"></div>
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title">Permintaan Pengambilan</span>
+        <div class="filter-bar">
+          <select id="filter-status" onchange="loadRequests()">
+            <option value="pending">Pending</option>
+            <option value="approved">Disetujui</option>
+            <option value="rejected">Ditolak</option>
+            <option value="">Semua</option>
+          </select>
+          <input type="date" id="filter-date" onchange="loadRequests()" placeholder="Filter tanggal" />
+        </div>
+      </div>
+      <div id="requests-table-wrap">
+        <div class="empty-state">Memuat data...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================== -->
+  <!-- TAB: STOK BARANG                -->
+  <!-- =============================== -->
+  <div class="tab-panel" id="tab-stok">
+    <div class="table-card">
+      <div class="table-header">
+        <span class="table-title">Stok Barang</span>
+        <div class="filter-bar">
+          <select id="stok-filter-cat" onchange="loadStok()">
+            <option value="">Semua Kategori</option>
+          </select>
+          <input type="text" id="stok-search" placeholder="Cari barang..." oninput="loadStok()" style="width:180px;" />
+        </div>
+      </div>
+      <div id="stok-table-wrap"><div class="empty-state">Memuat data...</div></div>
+    </div>
+  </div>
+
+  <!-- =============================== -->
+  <!-- TAB: BARANG MASUK               -->
+  <!-- =============================== -->
+  <div class="tab-panel" id="tab-masuk">
+    <div class="form-section">
+      <div class="form-section-title">Input Barang Masuk</div>
+      <div class="form-inline cols-3">
+        <div class="field"><label>Tanggal</label><input type="date" id="masuk-tanggal" /></div>
+        <div class="field">
+          <label>Kategori</label>
+          <select id="masuk-cat" onchange="filterMasukItems()">
+            <option value="">Semua Kategori</option>
+          </select>
+        </div>
+        <div class="field"><label>Barang</label><select id="masuk-item"><option value="">Pilih barang...</option></select></div>
+        <div class="field"><label>Qty</label><input type="number" id="masuk-qty" min="1" placeholder="0" /></div>
+        <div class="field"><label>Keterangan</label><input type="text" id="masuk-notes" placeholder="Opsional" /></div>
+        <div class="field" style="display:flex;align-items:flex-end;">
+          <button class="btn btn-primary" onclick="submitMasuk()">+ Tambah</button>
+        </div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header"><span class="table-title">Riwayat Barang Masuk</span>
+        <div class="filter-bar">
+          <input type="date" id="masuk-filter-date" onchange="loadMasuk()" />
+        </div>
+      </div>
+      <div id="masuk-table-wrap"><div class="empty-state">Memuat data...</div></div>
+    </div>
+  </div>
+
+  <!-- =============================== -->
+  <!-- TAB: MASTER DATA                -->
+  <!-- =============================== -->
+  <div class="tab-panel" id="tab-master">
+    <!-- Kategori -->
+    <div class="form-section">
+      <div class="form-section-title">Kategori</div>
+      <div class="form-inline cols-2" style="max-width:400px;">
+        <div class="field"><label>Nama Kategori</label><input type="text" id="new-cat-name" placeholder="Nama kategori baru" /></div>
+        <div class="field" style="display:flex;align-items:flex-end;"><button class="btn btn-primary" onclick="addCategory()">Tambah</button></div>
+      </div>
+      <div id="cat-list" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
+
+    <!-- Barang -->
+    <div class="form-section">
+      <div class="form-section-title">Barang</div>
+      <div class="form-inline cols-3" style="margin-bottom:1rem;">
+        <div class="field"><label>Nama Barang</label><input type="text" id="new-item-name" placeholder="Nama barang" /></div>
+        <div class="field"><label>Kategori</label><select id="new-item-cat"><option value="">Pilih kategori...</option></select></div>
+        <div class="field"><label>Satuan</label><input type="text" id="new-item-unit" placeholder="pcs / mtr / kg" /></div>
+        <div class="field"><label>Stok Awal</label><input type="number" id="new-item-stock" placeholder="0" min="0" /></div>
+        <div class="field" style="display:flex;align-items:flex-end;"><button class="btn btn-primary" onclick="addItem()">Tambah Barang</button></div>
+      </div>
+
+      <!-- Import CSV -->
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px;">Import CSV</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Format kolom: <code>nama_barang, kategori, satuan, stok</code></div>
+        <label class="import-zone" for="csv-input">
+          <input type="file" id="csv-input" accept=".csv" onchange="importCSV(event)" />
+          <div style="font-size:24px;">📂</div>
+          <p>Klik untuk upload file CSV</p>
+        </label>
+        <div id="import-result" style="margin-top:8px;font-size:12px;"></div>
+      </div>
+
+      <div id="items-table-wrap"><div class="empty-state">Memuat data...</div></div>
+    </div>
+
+    <!-- Karyawan -->
+    <div class="form-section">
+      <div class="form-section-title">Karyawan (User Lapangan)</div>
+      <div class="form-inline cols-3" style="margin-bottom:1rem;max-width:600px;">
+        <div class="field"><label>Nama</label><input type="text" id="new-emp-name" placeholder="Nama karyawan" /></div>
+        <div class="field"><label>Jabatan</label><input type="text" id="new-emp-jabatan" placeholder="Teknisi / Operator" /></div>
+        <div class="field" style="display:flex;align-items:flex-end;"><button class="btn btn-primary" onclick="addEmployee()">Tambah</button></div>
+      </div>
+      <div id="emp-table-wrap"><div class="empty-state">Memuat data...</div></div>
+    </div>
+  </div>
+
+  <!-- =============================== -->
+  <!-- TAB: LAPORAN                    -->
+  <!-- =============================== -->
+  <div class="tab-panel" id="tab-laporan">
+    <div class="table-card" style="margin-bottom:1rem;">
+      <div class="table-header">
+        <span class="table-title">Laporan Keluar Masuk</span>
+        <div class="filter-bar">
+          <select id="lap-type">
+            <option value="out">Keluar (Approved)</option>
+            <option value="in">Masuk</option>
+          </select>
+          <select id="lap-cat" onchange="loadLaporan()"><option value="">Semua Kategori</option></select>
+          <input type="date" id="lap-from" /> <span style="font-size:12px;color:var(--text-muted);line-height:32px;">s/d</span>
+          <input type="date" id="lap-to" />
+          <button class="btn btn-primary" onclick="loadLaporan()">Tampilkan</button>
+        </div>
+      </div>
+      <div id="lap-table-wrap"><div class="empty-state">Pilih filter lalu klik Tampilkan</div></div>
+    </div>
+  </div>
+
+</main>
+
+<footer>Gudang Sparepart — PT. Tigermandiri Pratama</footer>
+
+<script>
+let _categories = []
+let _items = []
+let _user = null
+
+// ---- INIT ----
+async function init() {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) { window.location.href = 'index.html'; return }
+  _user = session.user
+  const email = _user.email || ''
+  document.getElementById('pj-name').textContent = email.split('@')[0]
+
+  await loadCategories()
+  await loadItems()
+  loadRequests()
+  loadStok()
+  populateCategoryDropdowns()
+
+  const today = new Date().toISOString().split('T')[0]
+  document.getElementById('masuk-tanggal').value = today
+}
+
+async function doLogout() {
+  await supabase.auth.signOut()
+  window.location.href = 'index.html'
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+  document.getElementById(`tab-${name}`).classList.add('active')
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    if (b.getAttribute('onclick').includes(name)) b.classList.add('active')
+  })
+  if (name === 'stok') loadStok()
+  if (name === 'masuk') loadMasuk()
+  if (name === 'master') { loadMasterItems(); loadMasterEmployees(); renderCatList() }
+}
+
+// ---- CATEGORIES ----
+async function loadCategories() {
+  const { data } = await supabase.from('categories').select('*').order('name')
+  _categories = data || []
+}
+
+function populateCategoryDropdowns() {
+  const ids = ['stok-filter-cat','masuk-cat','new-item-cat','lap-cat']
+  ids.forEach(id => {
+    const el = document.getElementById(id)
+    if (!el) return
+    const first = el.options[0]
+    el.innerHTML = ''
+    el.appendChild(first)
+    _categories.forEach(c => {
+      const o = document.createElement('option')
+      o.value = c.id; o.textContent = c.name
+      el.appendChild(o)
+    })
+  })
+}
+
+async function addCategory() {
+  const name = document.getElementById('new-cat-name').value.trim()
+  if (!name) return
+  const { error } = await supabase.from('categories').insert({ name })
+  if (error) { alert('Gagal: ' + error.message); return }
+  document.getElementById('new-cat-name').value = ''
+  await loadCategories()
+  populateCategoryDropdowns()
+  renderCatList()
+  await loadItems()
+}
+
+function renderCatList() {
+  const el = document.getElementById('cat-list')
+  el.innerHTML = _categories.map(c => `
+    <div style="display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 10px;">
+      <span style="font-size:13px;">${escHtml(c.name)}</span>
+      <button onclick="deleteCategory('${c.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:0;line-height:1;">×</button>
+    </div>`).join('')
+}
+
+async function deleteCategory(id) {
+  if (!confirm('Hapus kategori ini?')) return
+  await supabase.from('categories').delete().eq('id', id)
+  await loadCategories()
+  populateCategoryDropdowns()
+  renderCatList()
+}
+
+// ---- ITEMS ----
+async function loadItems() {
+  const { data } = await supabase.from('items').select('*, categories(name)').order('name')
+  _items = data || []
+}
+
+function filterMasukItems() {
+  const catId = document.getElementById('masuk-cat').value
+  const sel = document.getElementById('masuk-item')
+  const filtered = catId ? _items.filter(i => i.category_id === catId) : _items
+  sel.innerHTML = '<option value="">Pilih barang...</option>' + filtered.map(i => `<option value="${i.id}">${escHtml(i.name)} (${i.stock} ${i.unit})</option>`).join('')
+}
+
+async function addItem() {
+  const name = document.getElementById('new-item-name').value.trim()
+  const catId = document.getElementById('new-item-cat').value
+  const unit = document.getElementById('new-item-unit').value.trim()
+  const stock = parseFloat(document.getElementById('new-item-stock').value) || 0
+  if (!name || !unit) { alert('Nama barang dan satuan wajib diisi.'); return }
+  const { error } = await supabase.from('items').insert({ name, category_id: catId || null, unit, stock })
+  if (error) { alert('Gagal: ' + error.message); return }
+  document.getElementById('new-item-name').value = ''
+  document.getElementById('new-item-unit').value = ''
+  document.getElementById('new-item-stock').value = ''
+  await loadItems()
+  loadMasterItems()
+  loadStok()
+}
+
+async function deleteItem(id) {
+  if (!confirm('Hapus barang ini?')) return
+  await supabase.from('items').delete().eq('id', id)
+  await loadItems()
+  loadMasterItems()
+  loadStok()
+}
+
+function loadMasterItems() {
+  const wrap = document.getElementById('items-table-wrap')
+  if (!_items.length) { wrap.innerHTML = '<div class="empty-state">Belum ada barang</div>'; return }
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Nama Barang</th><th>Kategori</th><th>Satuan</th><th>Stok</th><th></th></tr></thead>
+    <tbody>${_items.map(i => `
+      <tr>
+        <td>${escHtml(i.name)}</td>
+        <td>${escHtml(i.categories?.name || '-')}</td>
+        <td>${escHtml(i.unit)}</td>
+        <td class="${i.stock <= 5 ? 'stok-low' : ''}">${i.stock}</td>
+        <td><button class="btn btn-danger" onclick="deleteItem('${i.id}')">Hapus</button></td>
+      </tr>`).join('')}</tbody></table>`
+}
+
+// ---- CSV IMPORT ----
+async function importCSV(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  const text = await file.text()
+  const lines = text.trim().split('\n').filter(l => l.trim())
+  const resultEl = document.getElementById('import-result')
+  let success = 0, failed = 0
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''))
+    const [name, catName, unit, stockStr] = cols
+    if (!name || !unit) { failed++; continue }
+
+    let catId = null
+    if (catName) {
+      let cat = _categories.find(c => c.name.toLowerCase() === catName.toLowerCase())
+      if (!cat) {
+        const { data } = await supabase.from('categories').insert({ name: catName }).select().single()
+        if (data) { _categories.push(data); cat = data }
+      }
+      catId = cat?.id || null
+    }
+
+    const stock = parseFloat(stockStr) || 0
+    const { error } = await supabase.from('items').insert({ name, category_id: catId, unit, stock })
+    if (error) failed++; else success++
+  }
+
+  resultEl.innerHTML = `<span style="color:var(--success)">Berhasil import ${success} barang.</span>` +
+    (failed ? ` <span style="color:var(--danger)">${failed} baris gagal.</span>` : '')
+  await loadCategories()
+  await loadItems()
+  populateCategoryDropdowns()
+  loadMasterItems()
+  loadStok()
+  event.target.value = ''
+}
+
+// ---- EMPLOYEES ----
+async function addEmployee() {
+  const name = document.getElementById('new-emp-name').value.trim()
+  const jabatan = document.getElementById('new-emp-jabatan').value.trim()
+  if (!name) return
+  const { error } = await supabase.from('employees').insert({ name, jabatan })
+  if (error) { alert('Gagal: ' + error.message); return }
+  document.getElementById('new-emp-name').value = ''
+  document.getElementById('new-emp-jabatan').value = ''
+  loadMasterEmployees()
+}
+
+async function loadMasterEmployees() {
+  const { data } = await supabase.from('employees').select('*').order('name')
+  const wrap = document.getElementById('emp-table-wrap')
+  if (!data?.length) { wrap.innerHTML = '<div class="empty-state">Belum ada karyawan</div>'; return }
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Nama</th><th>Jabatan</th><th>Status</th><th></th></tr></thead>
+    <tbody>${data.map(e => `
+      <tr>
+        <td>${escHtml(e.name)}</td>
+        <td>${escHtml(e.jabatan || '-')}</td>
+        <td><span class="badge ${e.active ? 'badge-approved' : 'badge-rejected'}">${e.active ? 'Aktif' : 'Nonaktif'}</span></td>
+        <td>
+          <button class="btn ${e.active ? 'btn-reject' : 'btn-approve'}" onclick="toggleEmployee('${e.id}', ${e.active})">
+            ${e.active ? 'Nonaktifkan' : 'Aktifkan'}
+          </button>
+        </td>
+      </tr>`).join('')}</tbody></table>`
+}
+
+async function toggleEmployee(id, current) {
+  await supabase.from('employees').update({ active: !current }).eq('id', id)
+  loadMasterEmployees()
+}
+
+// ---- REQUESTS (PENDING) ----
+async function loadRequests() {
+  const status = document.getElementById('filter-status').value
+  const date = document.getElementById('filter-date').value
+
+  let q = supabase.from('stock_out_requests')
+    .select('*, employees(name, jabatan), stock_out_items(qty, items(name, unit, categories(name)))')
+    .order('created_at', { ascending: false })
+
+  if (status) q = q.eq('status', status)
+  if (date) q = q.eq('tanggal', date)
+
+  const { data } = await q
+  const wrap = document.getElementById('requests-table-wrap')
+
+  // Update badge
+  const pendingCount = (await supabase.from('stock_out_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending')).count || 0
+  const badge = document.getElementById('pending-count')
+  badge.textContent = pendingCount
+  badge.style.display = pendingCount > 0 ? 'inline-flex' : 'none'
+
+  if (!data?.length) { wrap.innerHTML = '<div class="empty-state">Tidak ada data</div>'; return }
+
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Tanggal</th><th>Nama</th><th>Keperluan</th><th>Barang</th><th>Status</th><th>Aksi</th></tr></thead>
+    <tbody>${data.map(r => {
+      const itemTags = r.stock_out_items?.map(si =>
+        `<span class="detail-item-tag">${escHtml(si.items?.name || '-')} — ${si.qty} ${si.items?.unit || ''}</span>`
+      ).join('') || '-'
+      return `<tr>
+        <td>${r.tanggal}</td>
+        <td><strong>${escHtml(r.employees?.name || '-')}</strong><br><span style="font-size:11px;color:var(--text-muted)">${escHtml(r.employees?.jabatan || '')}</span></td>
+        <td>${escHtml(r.keperluan || '-')}</td>
+        <td><div class="detail-items">${itemTags}</div></td>
+        <td><span class="badge badge-${r.status}">${r.status === 'pending' ? 'Pending' : r.status === 'approved' ? 'Disetujui' : 'Ditolak'}</span></td>
+        <td>${r.status === 'pending' ? `
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-approve" onclick="approveRequest('${r.id}')">Setujui</button>
+            <button class="btn btn-reject" onclick="rejectRequest('${r.id}')">Tolak</button>
+          </div>` : '<span style="font-size:12px;color:var(--text-muted)">—</span>'}</td>
+      </tr>`
+    }).join('')}</tbody></table>`
+}
+
+async function approveRequest(id) {
+  const { error } = await supabase.rpc('approve_stock_out', { request_id: id, approver_id: _user.id })
+  if (error) { alert('Gagal approve: ' + error.message); return }
+  await loadItems()
+  loadRequests()
+  loadStok()
+}
+
+async function rejectRequest(id) {
+  const reason = prompt('Alasan penolakan (opsional):') || ''
+  await supabase.from('stock_out_requests').update({ status: 'rejected', reject_reason: reason, approved_by: _user.id, approved_at: new Date().toISOString() }).eq('id', id)
+  loadRequests()
+}
+
+// ---- STOK ----
+async function loadStok() {
+  const catId = document.getElementById('stok-filter-cat').value
+  const search = document.getElementById('stok-search').value.toLowerCase()
+  let filtered = _items
+
+  if (catId) filtered = filtered.filter(i => i.category_id === catId)
+  if (search) filtered = filtered.filter(i => i.name.toLowerCase().includes(search))
+
+  const wrap = document.getElementById('stok-table-wrap')
+  if (!filtered.length) { wrap.innerHTML = '<div class="empty-state">Tidak ada barang</div>'; return }
+
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Nama Barang</th><th>Kategori</th><th>Satuan</th><th>Stok</th></tr></thead>
+    <tbody>${filtered.map(i => `
+      <tr>
+        <td>${escHtml(i.name)}</td>
+        <td>${escHtml(i.categories?.name || '-')}</td>
+        <td>${escHtml(i.unit)}</td>
+        <td class="${i.stock <= 5 ? 'stok-low' : 'stok-ok'}">${i.stock} ${i.stock <= 5 ? '⚠' : ''}</td>
+      </tr>`).join('')}</tbody></table>`
+}
+
+// ---- BARANG MASUK ----
+async function submitMasuk() {
+  const tanggal = document.getElementById('masuk-tanggal').value
+  const itemId = document.getElementById('masuk-item').value
+  const qty = parseFloat(document.getElementById('masuk-qty').value)
+  const notes = document.getElementById('masuk-notes').value.trim()
+
+  if (!tanggal || !itemId || !qty) { alert('Tanggal, barang, dan qty wajib diisi.'); return }
+
+  const { error } = await supabase.from('stock_in').insert({ item_id: itemId, qty, tanggal, notes, created_by: _user.id })
+  if (error) { alert('Gagal: ' + error.message); return }
+
+  document.getElementById('masuk-item').value = ''
+  document.getElementById('masuk-qty').value = ''
+  document.getElementById('masuk-notes').value = ''
+  await loadItems()
+  loadMasuk()
+  loadStok()
+}
+
+async function loadMasuk() {
+  const date = document.getElementById('masuk-filter-date').value
+  let q = supabase.from('stock_in').select('*, items(name, unit, categories(name))').order('created_at', { ascending: false }).limit(50)
+  if (date) q = q.eq('tanggal', date)
+  const { data } = await q
+
+  const wrap = document.getElementById('masuk-table-wrap')
+  if (!data?.length) { wrap.innerHTML = '<div class="empty-state">Belum ada data barang masuk</div>'; return }
+
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Tanggal</th><th>Barang</th><th>Kategori</th><th>Qty</th><th>Keterangan</th></tr></thead>
+    <tbody>${data.map(r => `
+      <tr>
+        <td>${r.tanggal}</td>
+        <td>${escHtml(r.items?.name || '-')}</td>
+        <td>${escHtml(r.items?.categories?.name || '-')}</td>
+        <td>+${r.qty} ${r.items?.unit || ''}</td>
+        <td>${escHtml(r.notes || '-')}</td>
+      </tr>`).join('')}</tbody></table>`
+}
+
+// ---- LAPORAN ----
+async function loadLaporan() {
+  const type = document.getElementById('lap-type').value
+  const catId = document.getElementById('lap-cat').value
+  const from = document.getElementById('lap-from').value
+  const to = document.getElementById('lap-to').value
+  const wrap = document.getElementById('lap-table-wrap')
+
+  if (type === 'in') {
+    let q = supabase.from('stock_in').select('*, items(name, unit, category_id, categories(name))').order('tanggal', { ascending: false })
+    if (from) q = q.gte('tanggal', from)
+    if (to) q = q.lte('tanggal', to)
+    const { data } = await q
+    let filtered = data || []
+    if (catId) filtered = filtered.filter(r => r.items?.category_id === catId)
+    if (!filtered.length) { wrap.innerHTML = '<div class="empty-state">Tidak ada data</div>'; return }
+    wrap.innerHTML = `<table>
+      <thead><tr><th>Tanggal</th><th>Barang</th><th>Kategori</th><th>Qty Masuk</th><th>Keterangan</th></tr></thead>
+      <tbody>${filtered.map(r => `
+        <tr><td>${r.tanggal}</td><td>${escHtml(r.items?.name || '-')}</td><td>${escHtml(r.items?.categories?.name || '-')}</td><td>+${r.qty} ${r.items?.unit || ''}</td><td>${escHtml(r.notes || '-')}</td></tr>`).join('')}</tbody></table>`
+  } else {
+    let q = supabase.from('stock_out_requests')
+      .select('*, employees(name), stock_out_items(qty, items(name, unit, category_id, categories(name)))')
+      .eq('status', 'approved').order('tanggal', { ascending: false })
+    if (from) q = q.gte('tanggal', from)
+    if (to) q = q.lte('tanggal', to)
+    const { data } = await q
+
+    let rows = []
+    ;(data || []).forEach(r => {
+      r.stock_out_items?.forEach(si => {
+        if (!catId || si.items?.category_id === catId) {
+          rows.push({ tanggal: r.tanggal, emp: r.employees?.name, item: si.items?.name, cat: si.items?.categories?.name, qty: si.qty, unit: si.items?.unit, keperluan: r.keperluan })
+        }
+      })
+    })
+
+    if (!rows.length) { wrap.innerHTML = '<div class="empty-state">Tidak ada data</div>'; return }
+    wrap.innerHTML = `<table>
+      <thead><tr><th>Tanggal</th><th>Diambil Oleh</th><th>Barang</th><th>Kategori</th><th>Qty Keluar</th><th>Keperluan</th></tr></thead>
+      <tbody>${rows.map(r => `
+        <tr><td>${r.tanggal}</td><td>${escHtml(r.emp || '-')}</td><td>${escHtml(r.item || '-')}</td><td>${escHtml(r.cat || '-')}</td><td>${r.qty} ${r.unit || ''}</td><td>${escHtml(r.keperluan || '-')}</td></tr>`).join('')}</tbody></table>`
+  }
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+}
+
+init()
+</script>
+</body>
+</html>
