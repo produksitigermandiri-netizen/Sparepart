@@ -73,51 +73,54 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
   .field textarea { resize: none; height: 72px; }
   .field input[readonly] { background: #F0EEE8; color: var(--text-muted); cursor: default; }
   .item-row-card select, .item-row-card input { font-size: 13px !important; padding: 8px 10px !important; }
-  .item-row-card label { font-size: 10px !important; }
+  .item-row-card label { font-size: 10px !important; margin-bottom: 5px !important; }
 
   /* ITEM ROWS — one line per item on desktop, stacks on mobile */
-  .items-container { display: flex; flex-direction: column; gap: 8px; }
+  .items-container { display: flex; flex-direction: column; gap: 10px; }
   .item-row-card {
     background: #FAFAF8; border: 1px solid var(--border);
-    border-radius: var(--radius-sm); padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    padding: 26px 12px 12px 12px;  /* extra top for BARANG badge */
     display: flex; flex-direction: row;
-    align-items: flex-end; gap: 10px; flex-wrap: nowrap;
+    align-items: flex-start; gap: 10px; flex-wrap: nowrap;
+    position: relative;
   }
   .item-row-num {
+    position: absolute; top: 8px; left: 12px;
     font-size: 10px; font-weight: 700; color: var(--amber);
-    letter-spacing: 0.06em; text-transform: uppercase;
-    white-space: nowrap; padding-bottom: 10px; flex-shrink: 0;
-    min-width: 54px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    background: rgba(245, 158, 11, 0.08);
+    padding: 2px 8px; border-radius: 10px;
+    white-space: nowrap;
   }
-  .item-col-cat  { flex: 0 0 140px; min-width: 0; }
+  .item-col-cat  { flex: 0 0 150px; min-width: 0; }
   .item-col-name { flex: 1 1 0;     min-width: 0; }
-  .item-col-qty  { flex: 0 0 80px;  min-width: 0; }
-  .item-col-unit { flex: 0 0 80px;  min-width: 0; }
+  .item-col-qty  { flex: 0 0 85px;  min-width: 0; }
+  .item-col-unit { flex: 0 0 85px;  min-width: 0; }
+  /* stok-info: absolute so it doesn't make the Name field taller than others */
+  .item-col-name { position: relative; padding-bottom: 16px; }
+  .item-col-name .stok-info { position: absolute; bottom: -2px; left: 0; margin-top: 0; }
   .remove-btn {
-    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
     background: transparent; border: 1px solid var(--border);
     color: var(--text-muted); cursor: pointer; font-size: 16px;
     display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s; margin-bottom: 4px;
+    transition: all 0.15s;
+    margin-top: 18px;  /* align with input bottom, not label top */
   }
   .remove-btn:hover { background: var(--danger-bg); color: var(--danger); border-color: #F5CCCC; }
 
-  /* Responsive: narrow screens stack back vertically */
+  /* Responsive: narrow screens stack back into 2-col grid */
   @media (max-width: 720px) {
     .item-row-card {
       flex-wrap: wrap;
-      align-items: stretch;
-      position: relative;
-      padding-top: 28px;
-    }
-    .item-row-num {
-      position: absolute; top: 8px; left: 12px;
-      padding-bottom: 0; min-width: 0;
+      padding: 28px 12px 12px 12px;
     }
     .item-col-cat, .item-col-name, .item-col-qty, .item-col-unit {
       flex: 1 1 calc(50% - 5px); min-width: 0;
     }
-    .remove-btn { position: absolute; top: 4px; right: 8px; margin-bottom: 0; }
+    .item-col-name { padding-bottom: 16px; }
+    .remove-btn { position: absolute; top: 4px; right: 8px; margin-top: 0; }
   }
 
   .add-item-btn {
