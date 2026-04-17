@@ -72,34 +72,53 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
   .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--navy); }
   .field textarea { resize: none; height: 72px; }
   .field input[readonly] { background: #F0EEE8; color: var(--text-muted); cursor: default; }
-  .item-row-card select, .item-row-card input { font-size: 12px !important; padding: 7px 6px !important; }
+  .item-row-card select, .item-row-card input { font-size: 13px !important; padding: 8px 10px !important; }
   .item-row-card label { font-size: 10px !important; }
 
-  /* ITEM ROWS */
-  .items-container { display: flex; flex-direction: column; gap: 6px; }
+  /* ITEM ROWS — one line per item on desktop, stacks on mobile */
+  .items-container { display: flex; flex-direction: column; gap: 8px; }
   .item-row-card {
     background: #FAFAF8; border: 1px solid var(--border);
-    border-radius: var(--radius-sm); padding: 8px 10px;
+    border-radius: var(--radius-sm); padding: 10px 12px;
     display: flex; flex-direction: row;
-    align-items: flex-end; gap: 8px; flex-wrap: nowrap;
+    align-items: flex-end; gap: 10px; flex-wrap: nowrap;
   }
   .item-row-num {
     font-size: 10px; font-weight: 700; color: var(--amber);
     letter-spacing: 0.06em; text-transform: uppercase;
     white-space: nowrap; padding-bottom: 10px; flex-shrink: 0;
+    min-width: 54px;
   }
-  .item-col-cat { flex: 0 0 110px; min-width: 0; }
-  .item-col-name { flex: 1 1 0; min-width: 0; }
-  .item-col-qty { flex: 0 0 65px; }
-  .item-col-unit { flex: 0 0 60px; }
+  .item-col-cat  { flex: 0 0 140px; min-width: 0; }
+  .item-col-name { flex: 1 1 0;     min-width: 0; }
+  .item-col-qty  { flex: 0 0 80px;  min-width: 0; }
+  .item-col-unit { flex: 0 0 80px;  min-width: 0; }
   .remove-btn {
-    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
     background: transparent; border: 1px solid var(--border);
-    color: var(--text-muted); cursor: pointer; font-size: 14px;
+    color: var(--text-muted); cursor: pointer; font-size: 16px;
     display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s; margin-bottom: 2px;
+    transition: all 0.15s; margin-bottom: 4px;
   }
   .remove-btn:hover { background: var(--danger-bg); color: var(--danger); border-color: #F5CCCC; }
+
+  /* Responsive: narrow screens stack back vertically */
+  @media (max-width: 720px) {
+    .item-row-card {
+      flex-wrap: wrap;
+      align-items: stretch;
+      position: relative;
+      padding-top: 28px;
+    }
+    .item-row-num {
+      position: absolute; top: 8px; left: 12px;
+      padding-bottom: 0; min-width: 0;
+    }
+    .item-col-cat, .item-col-name, .item-col-qty, .item-col-unit {
+      flex: 1 1 calc(50% - 5px); min-width: 0;
+    }
+    .remove-btn { position: absolute; top: 4px; right: 8px; margin-bottom: 0; }
+  }
 
   .add-item-btn {
     width: 100%; padding: 10px;
@@ -277,34 +296,30 @@ function addItemRow() {
   div.id = `row-${id}`
   div.innerHTML = `
     <div class="item-row-num">BARANG ${id}</div>
-    <div class="item-row-grid">
-      <div class="field">
-        <label>Kategori</label>
-        <select onchange="filterItems(${id})" id="cat-${id}">
-          <option value="">Semua Kategori</option>
-          ${catOptions}
-        </select>
-      </div>
-      <div class="field">
-        <label>Nama Barang</label>
-        <select onchange="onItemChange(${id})" id="item-${id}">
-          <option value="">Pilih barang...</option>
-          ${allItems.map(i => `<option value="${i.id}" data-unit="${escHtml(i.unit)}" data-stock="${i.stock}">${escHtml(i.name)}</option>`).join('')}
-        </select>
-        <div class="stok-info" id="stok-${id}"></div>
-      </div>
-      <div class="field">
-        <label>Qty</label>
-        <input type="number" id="qty-${id}" min="1" placeholder="0" oninput="checkQty(${id})" />
-      </div>
-      <div class="field">
-        <label>Satuan</label>
-        <input type="text" id="unit-${id}" readonly placeholder="-" />
-      </div>
-      <div class="remove-btn-wrap" style="display:flex;align-items:flex-end;">
-        <button class="remove-btn" onclick="removeRow(${id})" title="Hapus baris">×</button>
-      </div>
+    <div class="field item-col-cat">
+      <label>Kategori</label>
+      <select onchange="filterItems(${id})" id="cat-${id}">
+        <option value="">Semua Kategori</option>
+        ${catOptions}
+      </select>
     </div>
+    <div class="field item-col-name">
+      <label>Nama Barang</label>
+      <select onchange="onItemChange(${id})" id="item-${id}">
+        <option value="">Pilih barang...</option>
+        ${allItems.map(i => `<option value="${i.id}" data-unit="${escHtml(i.unit)}" data-stock="${i.stock}">${escHtml(i.name)}</option>`).join('')}
+      </select>
+      <div class="stok-info" id="stok-${id}"></div>
+    </div>
+    <div class="field item-col-qty">
+      <label>Qty</label>
+      <input type="number" id="qty-${id}" min="1" placeholder="0" oninput="checkQty(${id})" />
+    </div>
+    <div class="field item-col-unit">
+      <label>Satuan</label>
+      <input type="text" id="unit-${id}" readonly placeholder="-" />
+    </div>
+    <button class="remove-btn" onclick="removeRow(${id})" title="Hapus baris">×</button>
   `
   container.appendChild(div)
 }
