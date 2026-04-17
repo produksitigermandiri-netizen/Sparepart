@@ -170,37 +170,8 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
 <main>
 
   <!-- =============================== -->
-  <!-- TAB: PENGAMBILAN -->
+  <!-- TAB: PENGAMBILAN / RIWAYAT -->
   <div class="tab-panel active" id="tab-pending">
-
-    <!-- FORM INPUT PENGAMBILAN -->
-    <div class="form-section" style="margin-bottom:1rem;">
-      <div class="form-section-title">Input Pengambilan Barang</div>
-      <div class="form-inline" style="grid-template-columns:1fr 1fr;margin-bottom:12px;">
-        <div class="field">
-          <label>Tanggal</label>
-          <input type="date" id="amb-tanggal" />
-        </div>
-        <div class="field">
-          <label>Nama Pengambil</label>
-          <select id="amb-emp">
-            <option value="">Pilih karyawan...</option>
-          </select>
-        </div>
-      </div>
-      <div class="field" style="margin-bottom:12px;">
-        <label>Keperluan / Keterangan</label>
-        <input type="text" id="amb-keperluan" placeholder="Contoh: perbaikan mesin injection line 3" autocomplete="off" />
-      </div>
-
-      <!-- MULTI ITEM ROWS -->
-      <div id="amb-items-container" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"></div>
-      <button class="add-item-btn" onclick="addAmbRow()" style="width:100%;padding:9px;font-family:'Barlow',sans-serif;font-size:13px;font-weight:500;background:transparent;border:1px dashed var(--border-strong);border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;margin-bottom:12px;">+ Tambah Barang Lagi</button>
-
-      <button class="btn btn-primary" style="padding:10px 24px;font-size:14px;" onclick="submitAmbil()">Simpan Pengambilan</button>
-    </div>
-
-    <!-- RIWAYAT PENGAMBILAN -->
     <div class="table-card">
       <div class="table-header">
         <span class="table-title">Riwayat Pengambilan</span>
@@ -430,12 +401,8 @@ async function init() {
 
   await loadCategories()
   await loadItems()
-  await loadEmployeesDropdown()
   loadRiwayat()
   populateCategoryDropdowns()
-  const todayStr = new Date().toISOString().split('T')[0]
-  document.getElementById('amb-tanggal').value = todayStr
-  addAmbRow()
   loadStok()
   populateCategoryDropdowns()
 
@@ -459,7 +426,7 @@ function switchTab(name) {
   if (name === 'masuk') loadMasuk()
   if (name === 'master') { loadMasterItems(); loadMasterEmployees(); renderCatList() }
   if (name === 'adjustment') { populateAdjDropdowns(); loadAdjHistory() }
-  if (name === 'pending') loadRiwayat()
+  if (name === 'pending') { loadRiwayat() }
 }
 
 // ---- CATEGORIES ----
@@ -788,162 +755,8 @@ async function resetPin(id, name) {
 
 
 
-// ---- PENGAMBILAN (PJ INPUT) ----
-let _employees = []
-let _ambRowCount = 0
 
-async function loadEmployeesDropdown() {
-  const { data } = await supabase.from('employees').select('*').eq('active', true).order('name')
-  _employees = data || []
-  const sel = document.getElementById('amb-emp')
-  if (!sel) return
-  sel.innerHTML = '<option value="">Pilih karyawan...</option>' +
-    _employees.map(e => `<option value="${e.id}">${escHtml(e.name)}${e.jabatan ? ' — ' + escHtml(e.jabatan) : ''}</option>`).join('')
-}
-
-function addAmbRow() {
-  _ambRowCount++
-  const id = _ambRowCount
-  const container = document.getElementById('amb-items-container')
-  const catOptions = _categories.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('')
-  const div = document.createElement('div')
-  div.id = `amb-row-${id}`
-  div.style.cssText = 'background:#FAFAF8;border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;'
-  div.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <span style="font-size:10px;font-weight:700;color:var(--amber);letter-spacing:0.08em;text-transform:uppercase;">BARANG ${id}</span>
-      <button onclick="removeAmbRow(${id})" style="width:24px;height:24px;border-radius:50%;background:transparent;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">×</button>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:8px;">
-      <div class="field" style="margin:0;">
-        <label>Kategori</label>
-        <select onchange="filterAmbItems(${id})" id="amb-cat-${id}">
-          <option value="">Semua Kategori</option>
-          ${catOptions}
-        </select>
-      </div>
-      <div class="field" style="margin:0;">
-        <label>Nama Barang</label>
-        <select onchange="onAmbItemChange(${id})" id="amb-item-${id}">
-          <option value="">Pilih barang...</option>
-          ${_items.map(i => `<option value="${i.id}" data-unit="${escHtml(i.unit)}" data-stock="${i.stock}">${escHtml(i.name)}</option>`).join('')}
-        </select>
-        <div id="amb-stok-${id}" style="font-size:11px;margin-top:3px;color:var(--text-muted);"></div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:120px 120px;gap:8px;">
-      <div class="field" style="margin:0;">
-        <label>Qty</label>
-        <input type="number" id="amb-qty-${id}" min="1" placeholder="0" oninput="checkAmbQty(${id})" />
-      </div>
-      <div class="field" style="margin:0;">
-        <label>Satuan</label>
-        <input type="text" id="amb-unit-${id}" readonly placeholder="-" style="background:#F0EEE8;color:var(--text-muted);" />
-      </div>
-    </div>`
-  container.appendChild(div)
-}
-
-function removeAmbRow(id) {
-  const rows = document.querySelectorAll('#amb-items-container > div')
-  if (rows.length <= 1) return
-  document.getElementById(`amb-row-${id}`).remove()
-}
-
-function filterAmbItems(id) {
-  const catId = document.getElementById(`amb-cat-${id}`).value
-  const sel = document.getElementById(`amb-item-${id}`)
-  const filtered = catId ? _items.filter(i => i.category_id === catId) : _items
-  sel.innerHTML = '<option value="">Pilih barang...</option>' +
-    filtered.map(i => `<option value="${i.id}" data-unit="${escHtml(i.unit)}" data-stock="${i.stock}">${escHtml(i.name)}</option>`).join('')
-  document.getElementById(`amb-unit-${id}`).value = ''
-  document.getElementById(`amb-stok-${id}`).textContent = ''
-}
-
-function onAmbItemChange(id) {
-  const sel = document.getElementById(`amb-item-${id}`)
-  const opt = sel.options[sel.selectedIndex]
-  const unit = opt.dataset.unit || ''
-  const stock = parseFloat(opt.dataset.stock) || 0
-  document.getElementById(`amb-unit-${id}`).value = unit
-  const stokEl = document.getElementById(`amb-stok-${id}`)
-  if (opt.value) {
-    stokEl.textContent = `Stok: ${stock} ${unit}`
-    stokEl.style.color = stock <= 5 ? 'var(--danger)' : 'var(--success)'
-  } else {
-    stokEl.textContent = ''
-  }
-}
-
-function checkAmbQty(id) {
-  const sel = document.getElementById(`amb-item-${id}`)
-  const opt = sel.options[sel.selectedIndex]
-  if (!opt.value) return
-  const stock = parseFloat(opt.dataset.stock) || 0
-  const qty = parseFloat(document.getElementById(`amb-qty-${id}`).value) || 0
-  const unit = opt.dataset.unit || ''
-  const stokEl = document.getElementById(`amb-stok-${id}`)
-  stokEl.textContent = `Stok: ${stock} ${unit}`
-  stokEl.style.color = qty > stock ? 'var(--danger)' : 'var(--success)'
-}
-
-async function submitAmbil() {
-  const tanggal = document.getElementById('amb-tanggal').value
-  const empId = document.getElementById('amb-emp').value
-  const keperluan = document.getElementById('amb-keperluan').value.trim()
-
-  if (!tanggal) { alert('Tanggal wajib diisi.'); return }
-  if (!empId) { alert('Pilih nama pengambil.'); return }
-
-  const rows = document.querySelectorAll('#amb-items-container > div')
-  const items = []
-  let valid = true
-
-  rows.forEach(row => {
-    const id = row.id.replace('amb-row-','')
-    const itemSel = document.getElementById(`amb-item-${id}`)
-    const opt = itemSel?.options[itemSel.selectedIndex]
-    const itemId = itemSel?.value
-    const qty = parseFloat(document.getElementById(`amb-qty-${id}`)?.value)
-    const stock = parseFloat(opt?.dataset.stock) || 0
-    if (itemId && qty > 0) {
-      if (qty > stock) { alert(`Stok tidak cukup untuk ${escHtml(opt.text.split(' (')[0])}.`); valid = false; return }
-      items.push({ item_id: itemId, qty, stock })
-    } else if (itemId || qty > 0) { valid = false }
-  })
-
-  if (!valid) { alert('Ada baris yang belum lengkap.'); return }
-  if (items.length === 0) { alert('Pilih minimal 1 barang.'); return }
-
-  // Insert request dengan status approved langsung
-  const { data: req, error: reqErr } = await supabase
-    .from('stock_out_requests')
-    .insert({ employee_id: empId, tanggal, keperluan, status: 'approved', approved_by: _user.id, approved_at: new Date().toISOString() })
-    .select().single()
-
-  if (reqErr) { alert('Gagal simpan: ' + reqErr.message); return }
-
-  // Insert items
-  const itemsData = items.map(i => ({ request_id: req.id, item_id: i.item_id, qty: i.qty }))
-  await supabase.from('stock_out_items').insert(itemsData)
-
-  // Potong stok langsung
-  for (const item of items) {
-    await supabase.from('items').update({ stock: item.stock - item.qty }).eq('id', item.item_id)
-  }
-
-  // Reset form
-  document.getElementById('amb-keperluan').value = ''
-  document.getElementById('amb-emp').value = ''
-  document.getElementById('amb-items-container').innerHTML = ''
-  _ambRowCount = 0
-  addAmbRow()
-  await loadItems()
-  loadStok()
-  loadRiwayat()
-  alert('Pengambilan berhasil disimpan!')
-}
-
+// ---- RIWAYAT PENGAMBILAN ----
 async function loadRiwayat() {
   const from = document.getElementById('riwayat-from')?.value
   const to = document.getElementById('riwayat-to')?.value
