@@ -32,19 +32,52 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
   .header-text h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; color: white; letter-spacing: 0.02em; }
   .header-text p { font-size: 12px; color: #8899AA; margin-top: 1px; }
 
-  main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
-  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); width: 100%; max-width: 400px; overflow: hidden; }
-  .login-card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); }
-  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; letter-spacing: 0.04em; text-transform: uppercase; background: #EEF3FA; color: #2A5A9F; margin-bottom: 8px; }
-  .card-title { font-size: 16px; font-weight: 600; color: var(--navy); }
-  .card-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
-  .login-card-body { padding: 1.25rem 1.5rem; }
+  main { flex: 1; padding: 1.5rem 1rem; max-width: 1000px; margin: 0 auto; width: 100%; }
 
+  .page-intro { text-align: center; margin-bottom: 1.5rem; }
+  .page-intro h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; color: var(--navy); letter-spacing: 0.03em; }
+  .page-intro p { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .panel-header { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .panel-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px; letter-spacing: 0.04em; text-transform: uppercase; display: inline-block; margin-bottom: 6px; }
+  .badge-user { background: var(--amber-bg); color: var(--amber); }
+  .badge-pj { background: #EEF3FA; color: #2A5A9F; }
+  .panel-title { font-size: 15px; font-weight: 600; color: var(--navy); }
+  .panel-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .panel-body { padding: 14px; }
+
+  /* EMPLOYEE GRID — 3 kolom */
+  .employee-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+  @media (max-width: 500px) { .employee-grid { grid-template-columns: 1fr 1fr; } }
+
+  .emp-btn {
+    background: #FAFAF8; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px;
+    cursor: pointer; text-align: left; transition: all 0.15s;
+    display: flex; align-items: center; gap: 8px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .emp-btn:hover { border-color: var(--amber); background: var(--amber-bg); }
+  .emp-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--navy); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; flex-shrink: 0;
+  }
+  .emp-name { font-size: 12px; font-weight: 600; color: var(--navy); line-height: 1.3; }
+  .emp-jabatan { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+  .emp-loading, .emp-empty { grid-column: 1/-1; text-align: center; padding: 2rem; font-size: 13px; color: var(--text-muted); }
+
+  /* LOGIN */
   .field { margin-bottom: 12px; }
   .field label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 5px; }
-  .field input { width: 100%; padding: 10px 12px; font-family: 'Barlow', sans-serif; font-size: 14px; background: #FAFAF8; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); outline: none; transition: border-color 0.15s; }
+  .field input { width: 100%; padding: 9px 12px; font-family: 'Barlow', sans-serif; font-size: 14px; background: #FAFAF8; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); transition: border-color 0.15s; outline: none; }
   .field input:focus { border-color: var(--navy); }
-  .btn-login { width: 100%; padding: 11px; font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 0.05em; background: var(--navy); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; transition: background 0.15s; margin-top: 4px; }
+  .btn-login { width: 100%; padding: 10px; font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; background: var(--navy); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; transition: background 0.15s; letter-spacing: 0.03em; }
   .btn-login:hover { background: var(--navy-light); }
   .btn-login:disabled { opacity: 0.6; cursor: default; }
   .login-error { font-size: 12px; color: var(--danger); background: var(--danger-bg); border: 1px solid #F5CCCC; border-radius: var(--radius-sm); padding: 8px 12px; margin-top: 10px; display: none; }
@@ -87,23 +120,45 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
 </header>
 
 <main>
-  <div class="login-card">
-    <div class="login-card-header">
-      <span class="badge">PJ Gudang</span>
-      <div class="card-title">Login PJ Gudang</div>
-      <div class="card-sub">Kelola stok, input pengambilan, laporan</div>
+  <div class="page-intro">
+    <h2>Selamat Datang</h2>
+    <p>Pilih namamu untuk input pengambilan barang, atau login sebagai PJ Gudang</p>
+  </div>
+
+  <div class="two-col">
+    <!-- KIRI: USER LAPANGAN -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-badge badge-user">User Lapangan</span>
+        <div class="panel-title">Pilih Nama Kamu</div>
+        <div class="panel-sub">Klik namamu untuk input pengambilan barang</div>
+      </div>
+      <div class="panel-body">
+        <div class="employee-grid" id="employee-grid">
+          <div class="emp-loading">Memuat data karyawan...</div>
+        </div>
+      </div>
     </div>
-    <div class="login-card-body">
-      <div class="field">
-        <label>Username</label>
-        <input type="text" id="username" placeholder="Masukkan username" autocomplete="username" />
+
+    <!-- KANAN: PJ GUDANG -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-badge badge-pj">PJ Gudang</span>
+        <div class="panel-title">Login PJ Gudang</div>
+        <div class="panel-sub">Kelola stok, input pengambilan, laporan</div>
       </div>
-      <div class="field">
-        <label>Password</label>
-        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+      <div class="panel-body">
+        <div class="field">
+          <label>Username</label>
+          <input type="text" id="username" placeholder="Masukkan username" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <button class="btn-login" id="btn-login" onclick="doLogin()">Masuk</button>
+        <div class="login-error" id="login-error"></div>
       </div>
-      <button class="btn-login" id="btn-login" onclick="doLogin()">MASUK</button>
-      <div class="login-error" id="login-error"></div>
     </div>
   </div>
 </main>
@@ -141,6 +196,33 @@ var supabase = window.supabase.createClient('https://ssmwxtizalvubwmbvxxr.supaba
 <footer>Gudang Sparepart — PT. Tigermandiri Pratama</footer>
 
 <script>
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+}
+
+async function loadEmployees() {
+  const grid = document.getElementById('employee-grid')
+  const { data, error } = await supabase.from('employees').select('*').eq('active', true).order('name')
+  if (error || !data?.length) { grid.innerHTML = '<div class="emp-empty">Belum ada karyawan terdaftar</div>'; return }
+  grid.innerHTML = data.map(emp => {
+    const initials = emp.name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()
+    return `<button class="emp-btn" onclick="selectEmployee('${emp.id}', '${escHtml(emp.name)}', '${escHtml(emp.jabatan || '')}')">
+      <div class="emp-avatar">${initials}</div>
+      <div>
+        <div class="emp-name">${escHtml(emp.name)}</div>
+        <div class="emp-jabatan">${escHtml(emp.jabatan || 'Karyawan')}</div>
+      </div>
+    </button>`
+  }).join('')
+}
+
+function selectEmployee(id, name, jabatan) {
+  sessionStorage.setItem('emp_id', id)
+  sessionStorage.setItem('emp_name', name)
+  sessionStorage.setItem('emp_jabatan', jabatan)
+  window.location.href = 'pengambilan.html'
+}
+
 async function doLogin() {
   const username = document.getElementById('username').value.trim()
   const password = document.getElementById('password').value
@@ -151,7 +233,7 @@ async function doLogin() {
   btn.disabled = true; btn.textContent = 'Memproses...'
   const email = username + '@gudang.tigermandiri'
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) { errEl.textContent = 'Username atau password salah.'; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'MASUK'; return }
+  if (error) { errEl.textContent = 'Username atau password salah.'; errEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Masuk'; return }
   window.location.href = 'dashboard.html'
 }
 
@@ -168,7 +250,6 @@ async function checkSession() {
 let deferredPrompt = null
 function isIos() { return /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase()) }
 function isInStandaloneMode() { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true }
-
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault(); deferredPrompt = e
   if (!sessionStorage.getItem('install_dismissed')) {
@@ -177,8 +258,7 @@ window.addEventListener('beforeinstallprompt', function(e) {
 })
 async function installApp() {
   if (!deferredPrompt) return
-  deferredPrompt.prompt()
-  await deferredPrompt.userChoice
+  deferredPrompt.prompt(); await deferredPrompt.userChoice
   deferredPrompt = null
   document.getElementById('install-banner').classList.remove('show')
 }
@@ -189,6 +269,7 @@ if (isIos() && !isInStandaloneMode() && !sessionStorage.getItem('ios_dismissed')
 function dismissIosBanner() { document.getElementById('ios-banner').classList.remove('show'); sessionStorage.setItem('ios_dismissed','1') }
 
 checkSession()
+loadEmployees()
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() { navigator.serviceWorker.register('sw.js').catch(function() {}) })
